@@ -1,5 +1,5 @@
 {
-	"name": "sfleg",
+	"name": "@nrabehar/sfleg",
 	"version": "0.0.1",
 	"description": "Generic hierarchical configuration engine with arbitrary scopes, inheritance, caching, and audit. Zero required dependencies: works standalone or with any storage/pub-sub backend via simple ports.",
 	"main": "dist/index.js",

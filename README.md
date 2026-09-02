@@ -5,13 +5,13 @@ Generic hierarchical configuration engine. Arbitrary scopes, inheritance, cachin
 ## Install
 
 ```bash
-npm install sfleg
+npm install @nrabehar/sfleg
 ```
 
 ## Usage
 
 ```ts
-import { createEngine } from 'sfleg';
+import { createEngine } from '@nrabehar/sfleg';
 
 const { storage, resolver, writer } = createEngine();
 
