@@ -1,0 +1,57 @@
+{
+	"name": "sfleg",
+	"version": "0.0.1",
+	"description": "Generic hierarchical configuration engine with arbitrary scopes, inheritance, caching, and audit. Zero required dependencies: works standalone or with any storage/pub-sub backend via simple ports.",
+	"main": "dist/index.js",
+	"module": "dist/index.mjs",
+	"types": "dist/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.mjs",
+			"require": "./dist/index.js"
+		},
+		"./package.json": "./package.json"
+	},
+	"sideEffects": false,
+	"engines": {
+		"node": ">=22"
+	},
+	"files": [
+		"dist"
+	],
+	"scripts": {
+		"build": "tsc -p tsconfig.build.json && tsup",
+		"test": "jest",
+		"test:watch": "jest --watch",
+		"lint": "eslint .",
+		"bench": "ts-node bench/resolve.bench.ts",
+		"format": "prettier --write .",
+		"prepare": "npm run build"
+	},
+	"keywords": [
+		"config",
+		"settings",
+		"feature-flags",
+		"hierarchy",
+		"multi-tenant"
+	],
+	"license": "MIT",
+	"overrides": {
+		"esbuild": "^0.28.2"
+	},
+	"devDependencies": {
+		"@eslint/js": "^10.0.1",
+		"@types/jest": "^30.0.0",
+		"@types/node": "^26.4.1",
+		"eslint": "^10.9.1",
+		"jest": "^30.5.1",
+		"prettier": "^3.9.6",
+		"tinybench": "^6.1.4",
+		"ts-jest": "^29.4.12",
+		"ts-node": "^10.9.2",
+		"tsup": "^8.5.1",
+		"typescript": "^6.0.3",
+		"typescript-eslint": "^8.69.0"
+	}
+}
