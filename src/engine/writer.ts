@@ -224,15 +224,20 @@ export class Writer {
 					);
 				}
 				break;
-			case 'JSON':
+			case 'JSON': {
+				let serialized: string | undefined;
 				try {
-					JSON.stringify(value);
+					serialized = JSON.stringify(value);
 				} catch {
+					serialized = undefined;
+				}
+				if (serialized === undefined) {
 					throw new ValueError(
 						`Setting "${def.key}" expects a JSON-serializable value`,
 					);
 				}
 				break;
+			}
 			case 'DATE':
 				if (!(value instanceof Date) || Number.isNaN(value.getTime())) {
 					throw new ValueError(

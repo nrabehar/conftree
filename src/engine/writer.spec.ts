@@ -300,6 +300,19 @@ describe('Writer', () => {
 			).rejects.toThrow(ValueError);
 		});
 
+		it('rejects undefined for a JSON setting (JSON.stringify(undefined) does not throw, so it must be checked explicitly)', async () => {
+			tx.findDef.mockResolvedValue(jsonDef);
+
+			await expect(
+				writer.set({
+					key: 'notif.settings',
+					scope: { kind: 'entity', refId: 'e1' },
+					value: undefined as any,
+					authorId: 'u1',
+				}),
+			).rejects.toThrow(ValueError);
+		});
+
 		it('accepts a valid Date for a DATE setting and rejects an invalid one', async () => {
 			tx.findDef.mockResolvedValue(dateDef);
 			tx.findValue.mockResolvedValue(null);
