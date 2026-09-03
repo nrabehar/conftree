@@ -9,7 +9,7 @@ describe('MemoryStorageAdapter', () => {
 	});
 
 	describe('updateDefStatus', () => {
-		it('flips the status of the current edition in place, preserving its id/version and other fields', async () => {
+		it('changes the status of the current edition, preserving its id/version and other fields', async () => {
 			const def = await storage.createDef({
 				key: 'ui.theme',
 				label: 'Theme',
@@ -31,6 +31,24 @@ describe('MemoryStorageAdapter', () => {
 			expect(updated.version).toBe(def.version);
 			expect(updated.label).toBe('Theme');
 			expect(updated.options).toEqual(['light', 'dark']);
+		});
+
+		it('does not retroactively mutate a DefRecord obtained before the status change', async () => {
+			await storage.createDef({
+				key: 'ui.theme',
+				label: 'Theme',
+				type: 'ENUM',
+				options: ['light', 'dark'],
+				scopes: ['user'],
+				inherit: 'INDEPENDENT',
+				required: false,
+				status: 'STABLE',
+			});
+			const [before] = await storage.findDefs(['ui.theme']);
+
+			await storage.updateDefStatus('ui.theme', 'DEPRECATED');
+
+			expect(before.status).toBe('STABLE');
 		});
 
 		it('a RETIRED definition is no longer readable via findDefs and no longer writable via a transaction', async () => {

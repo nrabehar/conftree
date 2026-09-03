@@ -161,8 +161,9 @@ export class MemoryStorageAdapter implements StorageAdapter {
 		const current = this.latestVersion(key);
 		if (!current) throw new NotFoundError(key);
 
-		current.status = status;
-		return current;
+		const updated: DefRecord = { ...current, status };
+		this.defs = this.defs.map((d) => (d === current ? updated : d));
+		return updated;
 	}
 
 	async listDefs(status?: Status): Promise<DefRecord[]> {
