@@ -1,6 +1,6 @@
 # sfleg
 
-[![Socket Badge](https://badge.socket.dev/npm/package/@nrabehar/sfleg/0.0.1)](https://badge.socket.dev/npm/package/@nrabehar/sfleg/0.0.1)
+[![Socket Badge](https://badge.socket.dev/npm/package/@nrabehar/sfleg/0.1.0)](https://badge.socket.dev/npm/package/@nrabehar/sfleg/0.1.0)
 
 Generic hierarchical configuration engine. Arbitrary scopes, inheritance, caching, audit trail. Zero required dependencies: works standalone or with any storage/pub-sub backend.
 
