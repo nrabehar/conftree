@@ -1,19 +1,19 @@
-# sfleg
+# conftree
 
-[![Socket Badge](https://badge.socket.dev/npm/package/@nrabehar/sfleg/0.1.0)](https://badge.socket.dev/npm/package/@nrabehar/sfleg/0.1.0)
+[![Socket Badge](https://badge.socket.dev/npm/package/conftree/0.1.0)](https://badge.socket.dev/npm/package/conftree/0.1.0)
 
 Generic hierarchical configuration engine. Arbitrary scopes, inheritance, caching, audit trail. Zero required dependencies: works standalone or with any storage/pub-sub backend.
 
 ## Install
 
 ```bash
-npm install @nrabehar/sfleg
+npm install conftree
 ```
 
 ## Usage
 
 ```ts
-import { createEngine } from '@nrabehar/sfleg';
+import { createEngine } from 'conftree';
 
 const { storage, resolver, writer } = createEngine();
 
@@ -101,7 +101,7 @@ await hierarchy.detach('team-1');
 Get autocomplete and compile-time checking on keys, scopes, and value types by declaring your settings once and wrapping the engine:
 
 ```ts
-import { createEngine, createTypedEngine } from '@nrabehar/sfleg';
+import { createEngine, createTypedEngine } from 'conftree';
 
 interface Registry {
 	'ui.theme': { value: 'light' | 'dark' | 'system'; scope: 'user' };
@@ -136,7 +136,7 @@ Implement `StorageAdapter`, `ScopeHierarchy`, or `ChangeBus`, all defined in `sr
 
 ### Errors
 
-All errors extend `SflegError` and carry a stable `code` (e.g. `'CONFLICT'`, `'NOT_FOUND'`), in addition to a specific class (`ConflictError`, `NotFoundError`, ...) and `name`.
+All errors extend `ConfTreeError` and carry a stable `code` (e.g. `'CONFLICT'`, `'NOT_FOUND'`), in addition to a specific class (`ConflictError`, `NotFoundError`, ...) and `name`.
 
 ## License
 

@@ -7,7 +7,7 @@ export type ErrorCode =
 	| 'CORRUPT'
 	| 'CYCLE';
 
-export class SflegError extends Error {
+export class ConfTreeError extends Error {
 	constructor(
 		message: string,
 		public readonly code: ErrorCode,
@@ -18,13 +18,13 @@ export class SflegError extends Error {
 	}
 }
 
-export class NotFoundError extends SflegError {
+export class NotFoundError extends ConfTreeError {
 	constructor(key: string) {
 		super(`Unknown setting definition: "${key}"`, 'NOT_FOUND');
 	}
 }
 
-export class ScopeError extends SflegError {
+export class ScopeError extends ConfTreeError {
 	constructor(key: string, scopeKind: string) {
 		super(
 			`Setting "${key}" cannot be set or read at scope kind "${scopeKind}"`,
@@ -33,7 +33,7 @@ export class ScopeError extends SflegError {
 	}
 }
 
-export class RequiredError extends SflegError {
+export class RequiredError extends ConfTreeError {
 	constructor(key: string, scopeKind: string, scopeRefId: string | null) {
 		super(
 			`Required setting "${key}" has no resolvable value for scope ${scopeKind}:${scopeRefId ?? 'null'} ` +
@@ -43,13 +43,13 @@ export class RequiredError extends SflegError {
 	}
 }
 
-export class ValueError extends SflegError {
+export class ValueError extends ConfTreeError {
 	constructor(message: string) {
 		super(message, 'VALUE');
 	}
 }
 
-export class ConflictError extends SflegError {
+export class ConflictError extends ConfTreeError {
 	constructor(key: string, scopeKind: string, scopeRefId: string | null) {
 		super(
 			`Setting "${key}" at scope ${scopeKind}:${scopeRefId ?? 'null'} was modified concurrently. ` +
@@ -59,7 +59,7 @@ export class ConflictError extends SflegError {
 	}
 }
 
-export class CorruptError extends SflegError {
+export class CorruptError extends ConfTreeError {
 	constructor(valueId: string) {
 		super(
 			`setting value row ${valueId} has no typed value set: data corruption`,
@@ -68,7 +68,7 @@ export class CorruptError extends SflegError {
 	}
 }
 
-export class CycleError extends SflegError {
+export class CycleError extends ConfTreeError {
 	constructor(id: string, newParentId: string) {
 		super(
 			`Cannot attach/move scope "${id}" under "${newParentId}": would create a cycle`,

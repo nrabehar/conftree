@@ -1,10 +1,10 @@
 {
-	"name": "@nrabehar/sfleg",
-	"version": "0.2.0",
+	"name": "conftree",
+	"version": "0.1.0",
 	"description": "Generic hierarchical configuration engine with arbitrary scopes, inheritance, caching, and audit. Zero required dependencies: works standalone or with any storage/pub-sub backend via simple ports.",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/nrabehar/sfleg.git"
+		"url": "git+https://github.com/nrabehar/conftree.git"
 	},
 	"main": "dist/index.js",
 	"module": "dist/index.mjs",

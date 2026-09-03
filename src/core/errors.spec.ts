@@ -5,7 +5,7 @@ import {
 	NotFoundError,
 	RequiredError,
 	ScopeError,
-	SflegError,
+	ConfTreeError,
 	ValueError,
 } from './errors';
 
@@ -19,7 +19,7 @@ describe('error codes', () => {
 		[new CorruptError('v1'), 'CORRUPT', 'CorruptError'],
 		[new CycleError('a', 'b'), 'CYCLE', 'CycleError'],
 	])('%p carries code %s and name %s', (error, code, name) => {
-		expect(error).toBeInstanceOf(SflegError);
+		expect(error).toBeInstanceOf(ConfTreeError);
 		expect(error).toBeInstanceOf(Error);
 		expect(error.code).toBe(code);
 		expect(error.name).toBe(name);
