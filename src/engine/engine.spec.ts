@@ -1,5 +1,5 @@
 import { createEngine } from './engine';
-import { ConflictError } from '../core/errors';
+import { ConflictError, NotFoundError } from '../core/errors';
 
 describe('createEngine (end-to-end, zero config)', () => {
 	it('supports simple per-user preferences with no hierarchy at all (todo-app use case)', async () => {
@@ -345,5 +345,89 @@ describe('createEngine (end-to-end, zero config)', () => {
 			refId: 'user-1',
 		});
 		expect(history.map((h) => h.action)).toEqual(['created', 'unset']);
+	});
+
+	it('resolver.listAt() lists every setting explicitly set at a scope', async () => {
+		const { storage, resolver, writer } = createEngine();
+
+		await storage.createDef({
+			key: 'ui.theme',
+			label: 'Theme',
+			type: 'ENUM',
+			options: ['light', 'dark'],
+			scopes: ['user'],
+			inherit: 'INDEPENDENT',
+			required: false,
+			status: 'STABLE',
+		});
+		await storage.createDef({
+			key: 'ui.pageSize',
+			label: 'Page size',
+			type: 'NUMERIC',
+			scopes: ['user'],
+			inherit: 'INDEPENDENT',
+			required: false,
+			status: 'STABLE',
+		});
+		await writer.set({
+			key: 'ui.theme',
+			scope: { kind: 'user', refId: 'u1' },
+			value: 'dark',
+			authorId: 'u1',
+		});
+		await writer.set({
+			key: 'ui.pageSize',
+			scope: { kind: 'user', refId: 'u1' },
+			value: 20,
+			authorId: 'u1',
+		});
+		await writer.set({
+			key: 'ui.theme',
+			scope: { kind: 'user', refId: 'u2' },
+			value: 'light',
+			authorId: 'u2',
+		});
+
+		const { entries } = await resolver.listAt({
+			kind: 'user',
+			refId: 'u1',
+		});
+
+		expect(entries).toEqual({ 'ui.theme': 'dark', 'ui.pageSize': 20 });
+	});
+
+	it('retiring a definition removes it from reads and writes but keeps its audit history', async () => {
+		const { storage, writer, auditor } = createEngine();
+
+		await storage.createDef({
+			key: 'legacy.flag',
+			label: 'Legacy flag',
+			type: 'BOOLEAN',
+			scopes: ['user'],
+			inherit: 'INDEPENDENT',
+			required: false,
+			status: 'STABLE',
+		});
+		await writer.set({
+			key: 'legacy.flag',
+			scope: { kind: 'user', refId: 'u1' },
+			value: true,
+			authorId: 'u1',
+		});
+
+		await storage.updateDefStatus('legacy.flag', 'RETIRED');
+
+		await expect(
+			writer.set({
+				key: 'legacy.flag',
+				scope: { kind: 'user', refId: 'u1' },
+				value: false,
+				expectedVersion: 1,
+				authorId: 'u1',
+			}),
+		).rejects.toThrow(NotFoundError);
+
+		const history = await auditor.history('legacy.flag');
+		expect(history).toHaveLength(1);
 	});
 });

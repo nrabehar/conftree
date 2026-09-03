@@ -55,6 +55,22 @@ await auditor.history('ui.theme', { kind: 'user', refId: 'u1' });
 // [{ action: 'created', authorId: 'u1', after: {...}, at: ... }, ...]
 ```
 
+List every setting explicitly set at a scope (paginated):
+
+```ts
+const { entries, nextCursor } = await resolver.listAt({
+	kind: 'user',
+	refId: 'u1',
+});
+// { entries: { 'ui.theme': 'dark', 'ui.pageSize': 20 }, nextCursor: null }
+```
+
+Deprecate or retire a definition (retired definitions stop being readable and writable, but keep their audit history):
+
+```ts
+await storage.updateDefStatus('ui.theme', 'RETIRED');
+```
+
 Bring your own storage or pub/sub backend:
 
 ```ts
@@ -87,9 +103,10 @@ Implement `StorageAdapter`, `ScopeHierarchy`, or `ChangeBus`, all defined in `sr
 ## API
 
 - `createEngine(options?)`: returns `{ storage, hierarchy, bus, cache, resolver, writer, auditor }`.
-- `resolver.get(key, scope, asOf?)`, `resolver.getMany(keys, scope, asOf?)`
+- `resolver.get(key, scope, asOf?)`, `resolver.getMany(keys, scope, asOf?)`, `resolver.listAt(scope, { limit?, cursor? })`
 - `writer.set(params)`, `writer.setMany(paramsList)`, `writer.unset(params)`
 - `auditor.history(key, scope?)`
+- `storage.updateDefStatus(key, status)`
 
 ### Errors
 

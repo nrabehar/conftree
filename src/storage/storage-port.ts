@@ -72,11 +72,26 @@ export interface FindAuditQuery {
 	scopeRefId?: string | null;
 }
 
+export interface ListValuesQuery {
+	scopeKind: string;
+	scopeRefId: string | null;
+	limit?: number;
+	cursor?: string;
+}
+
+export interface ListValuesResult {
+	values: ValueRecord[];
+	nextCursor: string | null;
+}
+
 export interface StorageReader {
 	findDefs(keys: string[]): Promise<DefRecord[]>;
+	findDefsByIds(ids: string[]): Promise<DefRecord[]>;
+	findAnyDef(key: string): Promise<DefRecord | null>;
 	findValues(query: FindValuesQuery): Promise<ValueRecord[]>;
 	findChainValues(query: FindChainQuery): Promise<ValueRecord[]>;
 	findAudit(query: FindAuditQuery): Promise<AuditRecord[]>;
+	listValues(query: ListValuesQuery): Promise<ListValuesResult>;
 }
 
 export interface StorageTx {
@@ -93,6 +108,7 @@ export interface StorageTx {
 
 export interface StorageWriter {
 	createDef(input: CreateDefInput): Promise<DefRecord>;
+	updateDefStatus(key: string, status: Status): Promise<DefRecord>;
 	listDefs(status?: Status): Promise<DefRecord[]>;
 	transact<T>(fn: (tx: StorageTx) => Promise<T>): Promise<T>;
 }

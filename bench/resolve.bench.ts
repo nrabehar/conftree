@@ -1,6 +1,14 @@
-import { Bench } from 'tinybench';
 import type { StorageAdapter } from '../src';
 import { createEngine, MemoryStorageAdapter } from '../src';
+
+interface BenchInstance {
+	add(name: string, fn: () => unknown): BenchInstance;
+	run(): Promise<unknown>;
+	table(): unknown[];
+}
+interface TinybenchModule {
+	Bench: new (opts?: { time?: number }) => BenchInstance;
+}
 
 function withLatency(adapter: StorageAdapter, ms: number): StorageAdapter {
 	const delay = () => new Promise<void>((resolve) => setTimeout(resolve, ms));
@@ -8,6 +16,14 @@ function withLatency(adapter: StorageAdapter, ms: number): StorageAdapter {
 		findDefs: async (keys) => {
 			await delay();
 			return adapter.findDefs(keys);
+		},
+		findDefsByIds: async (ids) => {
+			await delay();
+			return adapter.findDefsByIds(ids);
+		},
+		findAnyDef: async (key) => {
+			await delay();
+			return adapter.findAnyDef(key);
 		},
 		findValues: async (query) => {
 			await delay();
@@ -21,9 +37,17 @@ function withLatency(adapter: StorageAdapter, ms: number): StorageAdapter {
 			await delay();
 			return adapter.findAudit(query);
 		},
+		listValues: async (query) => {
+			await delay();
+			return adapter.listValues(query);
+		},
 		createDef: async (input) => {
 			await delay();
 			return adapter.createDef(input);
+		},
+		updateDefStatus: async (key, status) => {
+			await delay();
+			return adapter.updateDefStatus(key, status);
 		},
 		listDefs: async (status) => {
 			await delay();
@@ -63,6 +87,8 @@ async function setup(latencyMs: number, keyCount: number) {
 }
 
 async function main() {
+	const { Bench } = (await import('tinybench')) as unknown as TinybenchModule;
+
 	const KEY_COUNT = 50;
 	const LATENCY_MS = 2;
 

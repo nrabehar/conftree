@@ -6,6 +6,8 @@ import type {
 	FindAuditQuery,
 	FindChainQuery,
 	FindValuesQuery,
+	ListValuesQuery,
+	ListValuesResult,
 	StorageAdapter,
 	StorageTx,
 } from './storage-port';
@@ -16,6 +18,7 @@ import type {
 	ValueRecord,
 	ValueType,
 } from '../core/types';
+import { NotFoundError } from '../core/errors';
 
 interface StoredValue extends ValueRecord {
 	validFrom: Date;
@@ -80,6 +83,40 @@ export class MemoryStorageAdapter implements StorageAdapter {
 		);
 	}
 
+	async findDefsByIds(ids: string[]): Promise<DefRecord[]> {
+		const idSet = new Set(ids);
+		return this.defs.filter((d) => idSet.has(d.id));
+	}
+
+	async findAnyDef(key: string): Promise<DefRecord | null> {
+		return this.latestVersion(key) ?? null;
+	}
+
+	async listValues(query: ListValuesQuery): Promise<ListValuesResult> {
+		const now = new Date();
+		const active = this.values
+			.filter(
+				(v) =>
+					v.scopeKind === query.scopeKind &&
+					v.scopeRefId === query.scopeRefId &&
+					v.validFrom <= now &&
+					(v.validTo === null || v.validTo > now),
+			)
+			.sort((a, b) => a.id.localeCompare(b.id));
+
+		const startIndex = query.cursor
+			? active.findIndex((v) => v.id === query.cursor) + 1
+			: 0;
+		const limit = query.limit ?? active.length - startIndex;
+		const page = active.slice(startIndex, startIndex + limit);
+		const nextCursor =
+			startIndex + page.length < active.length
+				? (page[page.length - 1]?.id ?? null)
+				: null;
+
+		return { values: page, nextCursor };
+	}
+
 	async findAudit(query: FindAuditQuery): Promise<AuditRecord[]> {
 		return this.auditLog
 			.filter(
@@ -120,6 +157,14 @@ export class MemoryStorageAdapter implements StorageAdapter {
 		return record;
 	}
 
+	async updateDefStatus(key: string, status: Status): Promise<DefRecord> {
+		const current = this.latestVersion(key);
+		if (!current) throw new NotFoundError(key);
+
+		current.status = status;
+		return current;
+	}
+
 	async listDefs(status?: Status): Promise<DefRecord[]> {
 		const rows = status
 			? this.defs.filter((d) => d.status === status)
@@ -141,8 +186,13 @@ export class MemoryStorageAdapter implements StorageAdapter {
 		key: string,
 		statuses: Status[],
 	): DefRecord | undefined {
+		const latest = this.latestVersion(key);
+		return latest && statuses.includes(latest.status) ? latest : undefined;
+	}
+
+	private latestVersion(key: string): DefRecord | undefined {
 		return this.defs
-			.filter((d) => d.key === key && statuses.includes(d.status))
+			.filter((d) => d.key === key)
 			.sort((a, b) => b.version - a.version)[0];
 	}
 

@@ -53,9 +53,12 @@ describe('Resolver', () => {
 	beforeEach(() => {
 		storage = {
 			findDefs: jest.fn(),
+			findDefsByIds: jest.fn(),
+			findAnyDef: jest.fn(),
 			findValues: jest.fn(),
 			findChainValues: jest.fn(),
 			findAudit: jest.fn(),
+			listValues: jest.fn(),
 		};
 		hierarchy = {
 			chain: jest.fn(),
@@ -423,6 +426,62 @@ describe('Resolver', () => {
 			).rejects.toThrow(RequiredError);
 
 			expect(hierarchy.chain).not.toHaveBeenCalled();
+		});
+	});
+
+	describe('listAt', () => {
+		it('resolves definitionIds back to keys and typed values', async () => {
+			storage.listValues.mockResolvedValue({
+				values: [
+					valueRow({ id: 'v1', definitionId: 'def-1', num: 50 }),
+					valueRow({
+						id: 'v2',
+						definitionId: 'def-2',
+						text: 'daily',
+					}),
+				],
+				nextCursor: null,
+			});
+			storage.findDefsByIds.mockResolvedValue([
+				baseDef,
+				{
+					...baseDef,
+					id: 'def-2',
+					key: 'contribution.frequency',
+					type: 'TEXT',
+				},
+			]);
+
+			const result = await resolver.listAt({
+				kind: 'entity',
+				refId: 'e1',
+			});
+
+			expect(result.entries).toEqual({
+				'contribution.amount': 50,
+				'contribution.frequency': 'daily',
+			});
+			expect(result.nextCursor).toBeNull();
+		});
+
+		it('forwards limit/cursor to storage and passes through nextCursor', async () => {
+			storage.listValues.mockResolvedValue({
+				values: [],
+				nextCursor: 'v10',
+			});
+
+			const result = await resolver.listAt(
+				{ kind: 'entity', refId: 'e1' },
+				{ limit: 5, cursor: 'v4' },
+			);
+
+			expect(storage.listValues).toHaveBeenCalledWith({
+				scopeKind: 'entity',
+				scopeRefId: 'e1',
+				limit: 5,
+				cursor: 'v4',
+			});
+			expect(result).toEqual({ entries: {}, nextCursor: 'v10' });
 		});
 	});
 

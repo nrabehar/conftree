@@ -15,6 +15,11 @@ import {
 import type { StorageReader } from '../storage/storage-port';
 import type { Cache } from '../cache/cache';
 
+export interface ListAtPage {
+	entries: Record<string, Value>;
+	nextCursor: string | null;
+}
+
 export class Resolver {
 	constructor(
 		private readonly storage: StorageReader,
@@ -25,6 +30,32 @@ export class Resolver {
 	async get(key: string, scope: Scope, asOf?: Date): Promise<Value> {
 		const result = await this.getMany([key], scope, asOf);
 		return result[key];
+	}
+
+	async listAt(
+		scope: Scope,
+		opts: { limit?: number; cursor?: string } = {},
+	): Promise<ListAtPage> {
+		const { values, nextCursor } = await this.storage.listValues({
+			scopeKind: scope.kind,
+			scopeRefId: scope.refId,
+			limit: opts.limit,
+			cursor: opts.cursor,
+		});
+		if (values.length === 0) return { entries: {}, nextCursor };
+
+		const defs = await this.storage.findDefsByIds([
+			...new Set(values.map((v) => v.definitionId)),
+		]);
+		const defById = new Map(defs.map((d) => [d.id, d]));
+
+		const entries: Record<string, Value> = {};
+		for (const row of values) {
+			const def = defById.get(row.definitionId);
+			if (!def) continue;
+			entries[def.key] = this.unwrap(def, row);
+		}
+		return { entries, nextCursor };
 	}
 
 	async getMany(

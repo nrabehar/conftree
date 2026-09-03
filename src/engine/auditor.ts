@@ -6,7 +6,7 @@ export class Auditor {
 	constructor(private readonly storage: StorageReader) {}
 
 	async history(key: string, scope?: Scope): Promise<AuditRecord[]> {
-		const [def] = await this.storage.findDefs([key]);
+		const def = await this.storage.findAnyDef(key);
 		if (!def) throw new NotFoundError(key);
 
 		return this.storage.findAudit({

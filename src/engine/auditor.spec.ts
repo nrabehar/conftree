@@ -28,15 +28,18 @@ describe('Auditor', () => {
 	beforeEach(() => {
 		storage = {
 			findDefs: jest.fn(),
+			findDefsByIds: jest.fn(),
+			findAnyDef: jest.fn(),
 			findValues: jest.fn(),
 			findChainValues: jest.fn(),
 			findAudit: jest.fn(),
+			listValues: jest.fn(),
 		};
 		auditor = new Auditor(storage);
 	});
 
 	it('throws NotFoundError for an unknown key', async () => {
-		storage.findDefs.mockResolvedValue([]);
+		storage.findAnyDef.mockResolvedValue(null);
 
 		await expect(auditor.history('unknown.key')).rejects.toThrow(
 			NotFoundError,
@@ -44,7 +47,7 @@ describe('Auditor', () => {
 	});
 
 	it('resolves the key to a definitionId and forwards an optional scope filter', async () => {
-		storage.findDefs.mockResolvedValue([def]);
+		storage.findAnyDef.mockResolvedValue(def);
 		const records: AuditRecord[] = [
 			{
 				id: 'audit-1',
@@ -74,7 +77,7 @@ describe('Auditor', () => {
 	});
 
 	it('queries across all scopes when no scope is given', async () => {
-		storage.findDefs.mockResolvedValue([def]);
+		storage.findAnyDef.mockResolvedValue(def);
 		storage.findAudit.mockResolvedValue([]);
 
 		await auditor.history('contribution.amount');

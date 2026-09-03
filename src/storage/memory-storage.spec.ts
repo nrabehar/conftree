@@ -1,0 +1,188 @@
+import { MemoryStorageAdapter } from './memory-storage';
+import { NotFoundError } from '../core/errors';
+
+describe('MemoryStorageAdapter', () => {
+	let storage: MemoryStorageAdapter;
+
+	beforeEach(() => {
+		storage = new MemoryStorageAdapter();
+	});
+
+	describe('updateDefStatus', () => {
+		it('flips the status of the current edition in place, preserving its id/version and other fields', async () => {
+			const def = await storage.createDef({
+				key: 'ui.theme',
+				label: 'Theme',
+				type: 'ENUM',
+				options: ['light', 'dark'],
+				scopes: ['user'],
+				inherit: 'INDEPENDENT',
+				required: false,
+				status: 'STABLE',
+			});
+
+			const updated = await storage.updateDefStatus(
+				'ui.theme',
+				'DEPRECATED',
+			);
+
+			expect(updated.status).toBe('DEPRECATED');
+			expect(updated.id).toBe(def.id);
+			expect(updated.version).toBe(def.version);
+			expect(updated.label).toBe('Theme');
+			expect(updated.options).toEqual(['light', 'dark']);
+		});
+
+		it('a RETIRED definition is no longer readable via findDefs and no longer writable via a transaction', async () => {
+			await storage.createDef({
+				key: 'ui.theme',
+				label: 'Theme',
+				type: 'ENUM',
+				options: ['light', 'dark'],
+				scopes: ['user'],
+				inherit: 'INDEPENDENT',
+				required: false,
+				status: 'STABLE',
+			});
+			await storage.updateDefStatus('ui.theme', 'RETIRED');
+
+			expect(await storage.findDefs(['ui.theme'])).toEqual([]);
+			await expect(
+				storage.transact((tx) => tx.findDef('ui.theme')),
+			).resolves.toBeNull();
+		});
+
+		it('throws NotFoundError for an unknown key', async () => {
+			await expect(
+				storage.updateDefStatus('unknown', 'RETIRED'),
+			).rejects.toThrow(NotFoundError);
+		});
+	});
+
+	describe('listValues', () => {
+		async function seed() {
+			const def = await storage.createDef({
+				key: 'k',
+				label: 'K',
+				type: 'NUMERIC',
+				scopes: ['user'],
+				inherit: 'INDEPENDENT',
+				required: false,
+				status: 'STABLE',
+			});
+			await storage.transact(async (tx) => {
+				await tx.createValue({
+					definitionId: def.id,
+					scopeKind: 'user',
+					scopeRefId: 'u1',
+					version: 1,
+					authorId: 'a',
+					type: 'NUMERIC',
+					value: 1,
+				});
+			});
+			return def;
+		}
+
+		it('lists only active values at the exact scope', async () => {
+			const def = await seed();
+			await storage.transact(async (tx) => {
+				await tx.createValue({
+					definitionId: def.id,
+					scopeKind: 'user',
+					scopeRefId: 'u2',
+					version: 1,
+					authorId: 'a',
+					type: 'NUMERIC',
+					value: 2,
+				});
+			});
+
+			const page = await storage.listValues({
+				scopeKind: 'user',
+				scopeRefId: 'u1',
+			});
+
+			expect(page.values).toHaveLength(1);
+			expect(page.values[0].scopeRefId).toBe('u1');
+			expect(page.nextCursor).toBeNull();
+		});
+
+		it('paginates with limit/cursor', async () => {
+			await storage.createDef({
+				key: 'k',
+				label: 'K',
+				type: 'NUMERIC',
+				scopes: ['user'],
+				inherit: 'INDEPENDENT',
+				required: false,
+				status: 'STABLE',
+			});
+			for (let i = 0; i < 3; i++) {
+				await storage.createDef({
+					key: `k${i}`,
+					label: `K${i}`,
+					type: 'NUMERIC',
+					scopes: ['user'],
+					inherit: 'INDEPENDENT',
+					required: false,
+					status: 'STABLE',
+				});
+			}
+			const defs = await storage.findDefs(['k', 'k0', 'k1', 'k2']);
+			await storage.transact(async (tx) => {
+				for (const d of defs) {
+					await tx.createValue({
+						definitionId: d.id,
+						scopeKind: 'user',
+						scopeRefId: 'u1',
+						version: 1,
+						authorId: 'a',
+						type: 'NUMERIC',
+						value: 1,
+					});
+				}
+			});
+
+			const firstPage = await storage.listValues({
+				scopeKind: 'user',
+				scopeRefId: 'u1',
+				limit: 2,
+			});
+			expect(firstPage.values).toHaveLength(2);
+			expect(firstPage.nextCursor).not.toBeNull();
+
+			const secondPage = await storage.listValues({
+				scopeKind: 'user',
+				scopeRefId: 'u1',
+				limit: 2,
+				cursor: firstPage.nextCursor!,
+			});
+			expect(secondPage.values).toHaveLength(2);
+			expect(secondPage.nextCursor).toBeNull();
+
+			const allIds = new Set([
+				...firstPage.values.map((v) => v.id),
+				...secondPage.values.map((v) => v.id),
+			]);
+			expect(allIds.size).toBe(4);
+		});
+	});
+
+	describe('findDefsByIds', () => {
+		it('resolves definitions by internal id regardless of status', async () => {
+			const def = await storage.createDef({
+				key: 'k',
+				label: 'K',
+				type: 'NUMERIC',
+				scopes: ['user'],
+				inherit: 'INDEPENDENT',
+				required: false,
+				status: 'DRAFT',
+			});
+
+			expect(await storage.findDefsByIds([def.id])).toEqual([def]);
+			expect(await storage.findDefsByIds(['missing'])).toEqual([]);
+		});
+	});
+});
