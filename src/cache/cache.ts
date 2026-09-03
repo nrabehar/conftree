@@ -1,5 +1,5 @@
 import type { Scope, ScopeHierarchy, Value } from '../core/types';
-import type { ChangeBus, ChangeEvent } from './change-bus';
+import type { ChangeBus, ChangeEvent, ChangeListener } from './change-bus';
 
 export interface CacheOptions {
 	enabled?: boolean;
@@ -20,13 +20,18 @@ const DEFAULT_MAX_ENTRIES = 50_000;
 
 export class Cache {
 	private readonly store = new Map<string, Entry>();
+	private readonly listener: ChangeListener = (event) => this.onChange(event);
 
 	constructor(
 		private readonly bus: ChangeBus,
 		private readonly options: CacheOptions = {},
 		private readonly hierarchy?: ScopeHierarchy,
 	) {
-		this.bus.subscribe((event) => this.onChange(event));
+		this.bus.subscribe(this.listener);
+	}
+
+	dispose(): void {
+		this.bus.unsubscribe(this.listener);
 	}
 
 	get(key: string, scope: Scope): Value | undefined {

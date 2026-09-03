@@ -81,6 +81,14 @@ const { resolver, writer } = createEngine({
 });
 ```
 
+If you create engines repeatedly against a shared, long-lived bus (e.g. a Redis-backed one in a server process), call `cache.dispose()` when an engine is no longer needed — otherwise its cache stays subscribed to the bus forever:
+
+```ts
+const { cache } = createEngine({ bus: sharedRedisBus });
+// ...later, e.g. on module teardown:
+cache.dispose();
+```
+
 ### Value types
 
 `BOOLEAN`, `NUMERIC`, `TEXT`, `ENUM`, `JSON`, `DATE`.

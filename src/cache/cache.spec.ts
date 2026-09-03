@@ -123,4 +123,22 @@ describe('Cache', () => {
 			cache.get('k', { kind: 'team', refId: 'team-1' }),
 		).toBeUndefined();
 	});
+
+	it('dispose() stops the cache from reacting to further bus events, without affecting other subscribers', async () => {
+		const bus = new LocalBus();
+		const cache = new Cache(bus);
+		const scope = { kind: 'user', refId: 'u1' };
+		cache.set('k', scope, 'v1');
+
+		cache.dispose();
+
+		await bus.publish({
+			definitionId: 'd1',
+			key: 'k',
+			scopeKind: 'user',
+			scopeRefId: 'u1',
+		});
+
+		expect(cache.get('k', scope)).toBe('v1');
+	});
 });

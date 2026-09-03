@@ -223,7 +223,9 @@ export class MemoryStorageAdapter implements StorageAdapter {
 
 			closeValue: async (id: string) => {
 				const row = this.values.find((v) => v.id === id);
-				if (row) row.validTo = new Date();
+				if (!row) return;
+				const closed: StoredValue = { ...row, validTo: new Date() };
+				this.values = this.values.map((v) => (v === row ? closed : v));
 			},
 
 			createValue: async (input: CreateValueInput) => {

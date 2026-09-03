@@ -96,7 +96,11 @@ describe('Writer', () => {
 				fn(tx),
 			),
 		} as unknown as jest.Mocked<StorageAdapter>;
-		bus = { publish: jest.fn(), subscribe: jest.fn() };
+		bus = {
+			publish: jest.fn(),
+			subscribe: jest.fn(),
+			unsubscribe: jest.fn(),
+		};
 		writer = new Writer(storage, bus);
 	});
 

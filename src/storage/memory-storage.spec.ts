@@ -251,4 +251,35 @@ describe('MemoryStorageAdapter', () => {
 			expect(stillActive?.version).toBe(1);
 		});
 	});
+
+	describe('closeValue', () => {
+		it('does not retroactively mutate a ValueRecord obtained before it was closed', async () => {
+			const def = await storage.createDef({
+				key: 'k',
+				label: 'K',
+				type: 'NUMERIC',
+				scopes: ['user'],
+				inherit: 'INDEPENDENT',
+				required: false,
+				status: 'STABLE',
+			});
+			const before = await storage.transact((tx) =>
+				tx.createValue({
+					definitionId: def.id,
+					scopeKind: 'user',
+					scopeRefId: 'u1',
+					version: 1,
+					authorId: 'a',
+					type: 'NUMERIC',
+					value: 1,
+				}),
+			);
+
+			await storage.transact((tx) => tx.closeValue(before.id));
+
+			expect((before as unknown as { validTo: unknown }).validTo).toBe(
+				null,
+			);
+		});
+	});
 });
