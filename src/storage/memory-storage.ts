@@ -177,7 +177,17 @@ export class MemoryStorageAdapter implements StorageAdapter {
 	}
 
 	async transact<T>(fn: (tx: StorageTx) => Promise<T>): Promise<T> {
-		const run = this.txQueue.then(() => fn(this.tx()));
+		const run = this.txQueue.then(async () => {
+			const valuesSnapshot = structuredClone(this.values);
+			const auditLogSnapshot = structuredClone(this.auditLog);
+			try {
+				return await fn(this.tx());
+			} catch (err) {
+				this.values = valuesSnapshot;
+				this.auditLog = auditLogSnapshot;
+				throw err;
+			}
+		});
 		this.txQueue = run.catch(() => {});
 		return run;
 	}

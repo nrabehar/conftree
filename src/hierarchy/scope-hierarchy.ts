@@ -43,6 +43,8 @@ export class LocalScopeHierarchy implements ScopeHierarchy {
 
 	async attach(id: string, parentId: string | null): Promise<void> {
 		if (parentId !== null) await this.assertNoCycle(id, parentId);
+		const oldParent = this.parentOf.get(id) ?? null;
+		if (oldParent !== null) this.childrenOf.get(oldParent)?.delete(id);
 		this.parentOf.set(id, parentId);
 		if (parentId !== null) this.addChild(parentId, id);
 		if (!this.childrenOf.has(id)) this.childrenOf.set(id, new Set());

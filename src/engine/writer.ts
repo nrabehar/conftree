@@ -171,12 +171,16 @@ export class Writer {
 	}
 
 	private async emit(created: ValueRecord, key: string): Promise<void> {
-		await this.bus?.publish({
-			definitionId: created.definitionId,
-			key,
-			scopeKind: created.scopeKind,
-			scopeRefId: created.scopeRefId,
-		});
+		try {
+			await this.bus?.publish({
+				definitionId: created.definitionId,
+				key,
+				scopeKind: created.scopeKind,
+				scopeRefId: created.scopeRefId,
+			});
+		} catch (err) {
+			console.error('conftree: change bus publish failed', err);
+		}
 	}
 
 	private validate(def: DefRecord, value: Value): void {

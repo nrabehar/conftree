@@ -178,6 +178,7 @@ export class Resolver {
 			definitionIds: missing.map((d) => d.id),
 			scopeKind: DEFAULT_SCOPE.kind,
 			scopeRefId: DEFAULT_SCOPE.refId,
+			asOf,
 		});
 		const defaultByDef = new Map(
 			defaultRows.map((r) => [r.definitionId, r]),

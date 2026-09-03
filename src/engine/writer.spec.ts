@@ -194,6 +194,29 @@ describe('Writer', () => {
 		});
 	});
 
+	it('resolves even when the change bus publish rejects: a failed notification must not look like a failed write', async () => {
+		const consoleError = jest
+			.spyOn(console, 'error')
+			.mockImplementation(() => {});
+		tx.findDef.mockResolvedValue(numericDef);
+		tx.findValue.mockResolvedValue(null);
+		tx.createValue.mockResolvedValue(
+			baseValueRow({ id: 'v1', num: 50, version: 1 }),
+		);
+		bus.publish.mockRejectedValue(new Error('bus is down'));
+
+		await expect(
+			writer.set({
+				key: 'contribution.amount',
+				scope: { kind: 'entity', refId: 'e1' },
+				value: 50,
+				authorId: 'u1',
+			}),
+		).resolves.toMatchObject({ version: 1 });
+
+		consoleError.mockRestore();
+	});
+
 	it('supersedes the active value and bumps version on a correct expectedVersion', async () => {
 		tx.findDef.mockResolvedValue(numericDef);
 		tx.findValue.mockResolvedValue(

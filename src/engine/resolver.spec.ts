@@ -135,6 +135,26 @@ describe('Resolver', () => {
 		expect(result).toBe(10);
 	});
 
+	it('forwards asOf to the default-scope fallback lookup, for a correct historical read', async () => {
+		storage.findDefs.mockResolvedValue([baseDef]);
+		hierarchy.chain.mockResolvedValue(['child-entity', 'root-entity']);
+		storage.findChainValues.mockResolvedValue([]);
+		storage.findValues.mockResolvedValue([
+			valueRow({ scopeKind: 'default', scopeRefId: null, num: 10 }),
+		]);
+		const asOf = new Date('2020-01-01');
+
+		await resolver.get(
+			'contribution.amount',
+			{ kind: 'entity', refId: 'child-entity' },
+			asOf,
+		);
+
+		expect(storage.findValues).toHaveBeenCalledWith(
+			expect.objectContaining({ scopeKind: 'default', asOf }),
+		);
+	});
+
 	it('throws RequiredError when required, no value, and no default', async () => {
 		storage.findDefs.mockResolvedValue([baseDef]);
 		hierarchy.chain.mockResolvedValue(['child-entity', 'root-entity']);

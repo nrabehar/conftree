@@ -185,4 +185,52 @@ describe('MemoryStorageAdapter', () => {
 			expect(await storage.findDefsByIds(['missing'])).toEqual([]);
 		});
 	});
+
+	describe('transact rollback', () => {
+		it('rolls back all writes from a failed transaction, including closeValue mutations', async () => {
+			const def = await storage.createDef({
+				key: 'k',
+				label: 'K',
+				type: 'NUMERIC',
+				scopes: ['user'],
+				inherit: 'INDEPENDENT',
+				required: false,
+				status: 'STABLE',
+			});
+			await storage.transact(async (tx) => {
+				await tx.createValue({
+					definitionId: def.id,
+					scopeKind: 'user',
+					scopeRefId: 'u1',
+					version: 1,
+					authorId: 'a',
+					type: 'NUMERIC',
+					value: 1,
+				});
+			});
+
+			await expect(
+				storage.transact(async (tx) => {
+					const current = await tx.findValue(def.id, 'user', 'u1');
+					await tx.closeValue(current!.id);
+					await tx.createValue({
+						definitionId: def.id,
+						scopeKind: 'user',
+						scopeRefId: 'u1',
+						version: 2,
+						authorId: 'a',
+						type: 'NUMERIC',
+						value: 2,
+					});
+					throw new Error('boom');
+				}),
+			).rejects.toThrow('boom');
+
+			const stillActive = await storage.transact((tx) =>
+				tx.findValue(def.id, 'user', 'u1'),
+			);
+			expect(stillActive?.num).toBe(1);
+			expect(stillActive?.version).toBe(1);
+		});
+	});
 });

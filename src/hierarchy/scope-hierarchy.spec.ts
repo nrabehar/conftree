@@ -64,6 +64,19 @@ describe('LocalScopeHierarchy', () => {
 		);
 	});
 
+	it('attach() called again on an already-attached id reparents it cleanly, without a stale reference on the old parent', async () => {
+		await hierarchy.attach('org-1', null);
+		await hierarchy.attach('org-2', null);
+		await hierarchy.attach('team-1', 'org-1');
+
+		await hierarchy.attach('team-1', 'org-2');
+
+		expect(await hierarchy.children('org-1')).not.toContain('team-1');
+		expect(await hierarchy.children('org-2')).toContain('team-1');
+		expect(await hierarchy.parent('team-1')).toBe('org-2');
+		expect(await hierarchy.descendants('org-1')).not.toContain('team-1');
+	});
+
 	it('move() reparents a subtree and updates chain()/children() accordingly', async () => {
 		await buildTree();
 		await hierarchy.move('team-1', 'team-2');

@@ -430,4 +430,49 @@ describe('createEngine (end-to-end, zero config)', () => {
 		const history = await auditor.history('legacy.flag');
 		expect(history).toHaveLength(1);
 	});
+
+	it('setMany() rolls back entirely when one key in the batch fails validation', async () => {
+		const { storage, writer, resolver } = createEngine();
+
+		await storage.createDef({
+			key: 'a',
+			label: 'A',
+			type: 'NUMERIC',
+			scopes: ['user'],
+			inherit: 'INDEPENDENT',
+			required: false,
+			status: 'STABLE',
+		});
+		await storage.createDef({
+			key: 'b',
+			label: 'B',
+			type: 'ENUM',
+			options: ['x'],
+			scopes: ['user'],
+			inherit: 'INDEPENDENT',
+			required: false,
+			status: 'STABLE',
+		});
+
+		await expect(
+			writer.setMany([
+				{
+					key: 'a',
+					scope: { kind: 'user', refId: 'u1' },
+					value: 1,
+					authorId: 'u1',
+				},
+				{
+					key: 'b',
+					scope: { kind: 'user', refId: 'u1' },
+					value: 'not-a-valid-enum',
+					authorId: 'u1',
+				},
+			]),
+		).rejects.toThrow();
+
+		await expect(
+			resolver.get('a', { kind: 'user', refId: 'u1' }),
+		).rejects.toThrow();
+	});
 });
