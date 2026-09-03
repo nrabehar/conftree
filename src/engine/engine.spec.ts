@@ -1,4 +1,5 @@
 import { createEngine } from './engine';
+import { ConflictError } from '../core/errors';
 
 describe('createEngine (end-to-end, zero config)', () => {
 	it('supports simple per-user preferences with no hierarchy at all (todo-app use case)', async () => {
@@ -249,5 +250,100 @@ describe('createEngine (end-to-end, zero config)', () => {
 			refId: 'u1',
 		});
 		expect(values).toEqual({ a: 1, b: 'hello' });
+	});
+
+	it('optimistic concurrency: two racing writers against the same expectedVersion, only one wins', async () => {
+		const { storage, writer } = createEngine();
+
+		await storage.createDef({
+			key: 'ui.pageSize',
+			label: 'Page size',
+			type: 'NUMERIC',
+			scopes: ['user'],
+			inherit: 'INDEPENDENT',
+			required: false,
+			status: 'STABLE',
+		});
+		await writer.set({
+			key: 'ui.pageSize',
+			scope: { kind: 'user', refId: 'u1' },
+			value: 20,
+			authorId: 'u1',
+		});
+
+		const results = await Promise.allSettled([
+			writer.set({
+				key: 'ui.pageSize',
+				scope: { kind: 'user', refId: 'u1' },
+				value: 50,
+				expectedVersion: 1,
+				authorId: 'a',
+			}),
+			writer.set({
+				key: 'ui.pageSize',
+				scope: { kind: 'user', refId: 'u1' },
+				value: 75,
+				expectedVersion: 1,
+				authorId: 'b',
+			}),
+		]);
+
+		const fulfilled = results.filter((r) => r.status === 'fulfilled');
+		const rejected = results.filter((r) => r.status === 'rejected');
+		expect(fulfilled).toHaveLength(1);
+		expect(rejected).toHaveLength(1);
+		expect(rejected[0].reason).toBeInstanceOf(ConflictError);
+	});
+
+	it('unset() reverts to the inherited/default value and records it in the audit trail', async () => {
+		const { storage, hierarchy, resolver, writer, auditor } =
+			createEngine();
+
+		await storage.createDef({
+			key: 'ui.theme',
+			label: 'Theme',
+			type: 'ENUM',
+			options: ['light', 'dark'],
+			scopes: ['org', 'user'],
+			inherit: 'INHERITABLE_OVERRIDABLE',
+			required: false,
+			status: 'STABLE',
+		});
+		await hierarchy.attach('org-1', null);
+		await hierarchy.attach('user-1', 'org-1');
+
+		await writer.set({
+			key: 'ui.theme',
+			scope: { kind: 'org', refId: 'org-1' },
+			value: 'dark',
+			authorId: 'admin',
+		});
+		await writer.set({
+			key: 'ui.theme',
+			scope: { kind: 'user', refId: 'user-1' },
+			value: 'light',
+			authorId: 'user-1',
+		});
+
+		expect(
+			await resolver.get('ui.theme', { kind: 'user', refId: 'user-1' }),
+		).toBe('light');
+
+		await writer.unset({
+			key: 'ui.theme',
+			scope: { kind: 'user', refId: 'user-1' },
+			expectedVersion: 1,
+			authorId: 'user-1',
+		});
+
+		expect(
+			await resolver.get('ui.theme', { kind: 'user', refId: 'user-1' }),
+		).toBe('dark');
+
+		const history = await auditor.history('ui.theme', {
+			kind: 'user',
+			refId: 'user-1',
+		});
+		expect(history.map((h) => h.action)).toEqual(['created', 'unset']);
 	});
 });

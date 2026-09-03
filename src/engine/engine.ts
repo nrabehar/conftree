@@ -9,6 +9,7 @@ import { LocalScopeHierarchy } from '../hierarchy/scope-hierarchy';
 import type { StorageAdapter } from '../storage/storage-port';
 import type { ScopeHierarchy } from '../core/types';
 import { Writer } from './writer';
+import { Auditor } from './auditor';
 
 export interface EngineOptions {
 	storage?: StorageAdapter;
@@ -24,6 +25,7 @@ export interface Engine {
 	cache: Cache;
 	resolver: Resolver;
 	writer: Writer;
+	auditor: Auditor;
 }
 
 export function createEngine(options: EngineOptions = {}): Engine {
@@ -36,5 +38,6 @@ export function createEngine(options: EngineOptions = {}): Engine {
 	const hierarchy = withHierarchyInvalidation(rawHierarchy, cache);
 	const resolver = new Resolver(storage, hierarchy, cache);
 	const writer = new Writer(storage, bus);
-	return { storage, hierarchy, bus, cache, resolver, writer };
+	const auditor = new Auditor(storage);
+	return { storage, hierarchy, bus, cache, resolver, writer, auditor };
 }

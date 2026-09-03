@@ -17,6 +17,10 @@ function withLatency(adapter: StorageAdapter, ms: number): StorageAdapter {
 			await delay();
 			return adapter.findChainValues(query);
 		},
+		findAudit: async (query) => {
+			await delay();
+			return adapter.findAudit(query);
+		},
 		createDef: async (input) => {
 			await delay();
 			return adapter.createDef(input);

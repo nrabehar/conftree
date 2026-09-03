@@ -12,15 +12,17 @@ export function withHierarchyInvalidation(
 		parent: (id) => hierarchy.parent(id),
 		attach: async (id, parentId) => {
 			await hierarchy.attach(id, parentId);
-			cache.dropAll();
+			cache.dropForScopes(await hierarchy.descendants(id));
 		},
 		move: async (id, newParentId) => {
+			const descendants = await hierarchy.descendants(id);
 			await hierarchy.move(id, newParentId);
-			cache.dropAll();
+			cache.dropForScopes(descendants);
 		},
 		detach: async (id) => {
+			const descendants = await hierarchy.descendants(id);
 			await hierarchy.detach(id);
-			cache.dropAll();
+			cache.dropForScopes(descendants);
 		},
 	};
 }

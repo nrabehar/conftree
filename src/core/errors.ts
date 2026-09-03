@@ -1,60 +1,78 @@
-export class NotFoundError extends Error {
-	constructor(key: string) {
-		super(`Unknown setting definition: "${key}"`);
-		this.name = 'NotFoundError';
+export type ErrorCode =
+	| 'NOT_FOUND'
+	| 'SCOPE'
+	| 'REQUIRED'
+	| 'VALUE'
+	| 'CONFLICT'
+	| 'CORRUPT'
+	| 'CYCLE';
+
+export class SflegError extends Error {
+	constructor(
+		message: string,
+		public readonly code: ErrorCode,
+	) {
+		super(message);
+		this.name = new.target.name;
+		Error.captureStackTrace?.(this, new.target);
 	}
 }
 
-export class ScopeError extends Error {
+export class NotFoundError extends SflegError {
+	constructor(key: string) {
+		super(`Unknown setting definition: "${key}"`, 'NOT_FOUND');
+	}
+}
+
+export class ScopeError extends SflegError {
 	constructor(key: string, scopeKind: string) {
 		super(
 			`Setting "${key}" cannot be set or read at scope kind "${scopeKind}"`,
+			'SCOPE',
 		);
-		this.name = 'ScopeError';
 	}
 }
 
-export class RequiredError extends Error {
+export class RequiredError extends SflegError {
 	constructor(key: string, scopeKind: string, scopeRefId: string | null) {
 		super(
 			`Required setting "${key}" has no resolvable value for scope ${scopeKind}:${scopeRefId ?? 'null'} ` +
 				`and no default is defined`,
+			'REQUIRED',
 		);
-		this.name = 'RequiredError';
 	}
 }
 
-export class ValueError extends Error {
+export class ValueError extends SflegError {
 	constructor(message: string) {
-		super(message);
-		this.name = 'ValueError';
+		super(message, 'VALUE');
 	}
 }
 
-export class ConflictError extends Error {
+export class ConflictError extends SflegError {
 	constructor(key: string, scopeKind: string, scopeRefId: string | null) {
 		super(
 			`Setting "${key}" at scope ${scopeKind}:${scopeRefId ?? 'null'} was modified concurrently. ` +
 				`Reload the current value and retry.`,
+			'CONFLICT',
 		);
-		this.name = 'ConflictError';
 	}
 }
 
-export class CorruptError extends Error {
+export class CorruptError extends SflegError {
 	constructor(valueId: string) {
 		super(
 			`setting value row ${valueId} has no typed value set: data corruption`,
+			'CORRUPT',
 		);
-		this.name = 'CorruptError';
 	}
 }
 
-export class CycleError extends Error {
+export class CycleError extends SflegError {
 	constructor(id: string, newParentId: string) {
 		super(
 			`Cannot attach/move scope "${id}" under "${newParentId}": would create a cycle`,
+			'CYCLE',
 		);
-		this.name = 'CycleError';
 	}
 }

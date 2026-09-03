@@ -55,6 +55,7 @@ describe('Resolver', () => {
 			findDefs: jest.fn(),
 			findValues: jest.fn(),
 			findChainValues: jest.fn(),
+			findAudit: jest.fn(),
 		};
 		hierarchy = {
 			chain: jest.fn(),
@@ -355,6 +356,43 @@ describe('Resolver', () => {
 			expect(result['contribution.amount']).toBe(1);
 			expect(result['contribution.frequency']).toBe(2);
 			expect(storage.findValues).toHaveBeenCalledTimes(2);
+		});
+	});
+
+	describe('getMany fail-fast', () => {
+		it('rejects the whole batch when one of several keys is unknown', async () => {
+			storage.findDefs.mockResolvedValue([baseDef]);
+
+			await expect(
+				resolver.getMany(['contribution.amount', 'unknown.key'], {
+					kind: 'entity',
+					refId: 'e1',
+				}),
+			).rejects.toThrow(NotFoundError);
+		});
+
+		it('rejects the whole batch when one of several keys has no resolvable value', async () => {
+			storage.findDefs.mockResolvedValue([
+				baseDef,
+				{
+					...baseDef,
+					id: 'def-2',
+					key: 'contribution.frequency',
+					inherit: 'INDEPENDENT',
+				},
+			]);
+			hierarchy.chain.mockResolvedValue(['child-entity', 'root-entity']);
+			storage.findChainValues.mockResolvedValue([
+				valueRow({ scopeRefId: 'child-entity', num: 50 }),
+			]);
+			storage.findValues.mockResolvedValue([]);
+
+			await expect(
+				resolver.getMany(
+					['contribution.amount', 'contribution.frequency'],
+					{ kind: 'entity', refId: 'child-entity' },
+				),
+			).rejects.toThrow(RequiredError);
 		});
 	});
 

@@ -80,6 +80,27 @@ describe('Cache', () => {
 		);
 	});
 
+	it('dropForScopes() clears every key at the given scope refIds, leaving other scopes untouched', () => {
+		const bus = new LocalBus();
+		const cache = new Cache(bus);
+
+		cache.set('a', { kind: 'team', refId: 'team-1' }, 'a-team1');
+		cache.set('b', { kind: 'team', refId: 'team-1' }, 'b-team1');
+		cache.set('a', { kind: 'team', refId: 'team-2' }, 'a-team2');
+
+		cache.dropForScopes(['team-1']);
+
+		expect(
+			cache.get('a', { kind: 'team', refId: 'team-1' }),
+		).toBeUndefined();
+		expect(
+			cache.get('b', { kind: 'team', refId: 'team-1' }),
+		).toBeUndefined();
+		expect(cache.get('a', { kind: 'team', refId: 'team-2' })).toBe(
+			'a-team2',
+		);
+	});
+
 	it('with a hierarchy, invalidating an ancestor also invalidates its descendants', async () => {
 		const bus = new LocalBus();
 		const hierarchy = new LocalScopeHierarchy();

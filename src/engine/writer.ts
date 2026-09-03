@@ -17,6 +17,14 @@ export interface SetParams {
 	reason?: string;
 }
 
+export interface UnsetParams {
+	key: string;
+	scope: Scope;
+	expectedVersion?: number;
+	authorId: string;
+	reason?: string;
+}
+
 const REDACTED = '[redacted]';
 
 export class Writer {
@@ -96,6 +104,9 @@ export class Writer {
 
 		await tx.createAudit({
 			valueId: created.id,
+			definitionId: def.id,
+			scopeKind: created.scopeKind,
+			scopeRefId: created.scopeRefId,
 			action: current ? 'superseded' : 'created',
 			authorId: params.authorId,
 			before: current ? this.snapshotOf(def, current) : undefined,
@@ -104,6 +115,59 @@ export class Writer {
 		});
 
 		return created;
+	}
+
+	async unset(params: UnsetParams): Promise<void> {
+		const closed = await this.storage.transact((tx) =>
+			this.unsetInTx(tx, params),
+		);
+		if (closed) await this.emit(closed, params.key);
+	}
+
+	private async unsetInTx(
+		tx: StorageTx,
+		params: UnsetParams,
+	): Promise<ValueRecord | null> {
+		const def = await tx.findDef(params.key);
+		if (!def) throw new NotFoundError(params.key);
+
+		if (
+			params.scope.kind !== 'default' &&
+			!def.scopes.includes(params.scope.kind)
+		) {
+			throw new ScopeError(def.key, params.scope.kind);
+		}
+
+		const current = await tx.findValue(
+			def.id,
+			params.scope.kind,
+			params.scope.refId,
+		);
+
+		const currentVersion = current?.version ?? 0;
+		const expected = params.expectedVersion ?? 0;
+		if (currentVersion !== expected) {
+			throw new ConflictError(
+				def.key,
+				params.scope.kind,
+				params.scope.refId,
+			);
+		}
+		if (!current) return null;
+
+		await tx.closeValue(current.id);
+		await tx.createAudit({
+			valueId: current.id,
+			definitionId: def.id,
+			scopeKind: current.scopeKind,
+			scopeRefId: current.scopeRefId,
+			action: 'unset',
+			authorId: params.authorId,
+			before: this.snapshotOf(def, current),
+			reason: params.reason,
+		});
+
+		return current;
 	}
 
 	private async emit(created: ValueRecord, key: string): Promise<void> {

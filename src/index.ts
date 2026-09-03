@@ -7,5 +7,6 @@ export * from './storage/storage-port';
 export * from './storage/memory-storage';
 export * from './engine/resolver';
 export * from './engine/writer';
+export * from './engine/auditor';
 export * from './engine/hierarchy-cache-sync';
 export * from './engine/engine';

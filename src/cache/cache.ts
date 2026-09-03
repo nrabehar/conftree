@@ -8,6 +8,9 @@ export interface CacheOptions {
 }
 
 interface Entry {
+	key: string;
+	scopeKind: string;
+	scopeRefId: string | null;
 	value: Value;
 	expiresAt: number;
 }
@@ -49,13 +52,18 @@ export class Cache {
 			if (oldest !== undefined) this.store.delete(oldest);
 		}
 		const ttlMs = this.options.ttlMs ?? DEFAULT_TTL_MS;
-		this.store.set(cacheKey, { value, expiresAt: Date.now() + ttlMs });
+		this.store.set(cacheKey, {
+			key,
+			scopeKind: scope.kind,
+			scopeRefId: scope.refId,
+			value,
+			expiresAt: Date.now() + ttlMs,
+		});
 	}
 
 	drop(key: string): void {
-		const prefix = `${key}::`;
-		for (const cacheKey of this.store.keys()) {
-			if (cacheKey.startsWith(prefix)) this.store.delete(cacheKey);
+		for (const [cacheKey, entry] of this.store) {
+			if (entry.key === key) this.store.delete(cacheKey);
 		}
 	}
 
@@ -63,15 +71,26 @@ export class Cache {
 		this.store.clear();
 	}
 
+	dropForScopes(scopeRefIds: Iterable<string>): void {
+		const targets = new Set(scopeRefIds);
+		if (targets.size === 0) return;
+		for (const [cacheKey, entry] of this.store) {
+			if (entry.scopeRefId !== null && targets.has(entry.scopeRefId)) {
+				this.store.delete(cacheKey);
+			}
+		}
+	}
+
 	private dropScoped(key: string, scopeRefIds: Iterable<string>): void {
 		const targets = new Set(scopeRefIds);
-		const prefix = `${key}::`;
-		for (const cacheKey of this.store.keys()) {
-			if (!cacheKey.startsWith(prefix)) continue;
-			const refId = cacheKey.slice(
-				cacheKey.indexOf(':', prefix.length) + 1,
-			);
-			if (targets.has(refId)) this.store.delete(cacheKey);
+		for (const [cacheKey, entry] of this.store) {
+			if (
+				entry.key === key &&
+				entry.scopeRefId !== null &&
+				targets.has(entry.scopeRefId)
+			) {
+				this.store.delete(cacheKey);
+			}
 		}
 	}
 
@@ -89,6 +108,6 @@ export class Cache {
 	}
 
 	private keyFor(key: string, scope: Scope): string {
-		return `${key}::${scope.kind}:${scope.refId ?? 'null'}`;
+		return JSON.stringify([key, scope.kind, scope.refId]);
 	}
 }

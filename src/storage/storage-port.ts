@@ -47,19 +47,36 @@ export interface CreateValueInput {
 	value: Value;
 }
 
+export type AuditAction = 'created' | 'superseded' | 'unset';
+
 export interface CreateAuditInput {
 	valueId: string;
-	action: 'created' | 'superseded';
+	definitionId: string;
+	scopeKind: string;
+	scopeRefId: string | null;
+	action: AuditAction;
 	authorId: string;
 	before?: unknown;
-	after: unknown;
+	after?: unknown;
 	reason?: string;
+}
+
+export interface AuditRecord extends CreateAuditInput {
+	id: string;
+	at: Date;
+}
+
+export interface FindAuditQuery {
+	definitionId: string;
+	scopeKind?: string;
+	scopeRefId?: string | null;
 }
 
 export interface StorageReader {
 	findDefs(keys: string[]): Promise<DefRecord[]>;
 	findValues(query: FindValuesQuery): Promise<ValueRecord[]>;
 	findChainValues(query: FindChainQuery): Promise<ValueRecord[]>;
+	findAudit(query: FindAuditQuery): Promise<AuditRecord[]>;
 }
 
 export interface StorageTx {

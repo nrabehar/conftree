@@ -1,7 +1,9 @@
 import type {
+	AuditRecord,
 	CreateAuditInput,
 	CreateDefInput,
 	CreateValueInput,
+	FindAuditQuery,
 	FindChainQuery,
 	FindValuesQuery,
 	StorageAdapter,
@@ -34,8 +36,9 @@ function toTypedColumns(type: ValueType, value: Value) {
 export class MemoryStorageAdapter implements StorageAdapter {
 	private defs: DefRecord[] = [];
 	private values: StoredValue[] = [];
-	private auditLog: Array<CreateAuditInput & { id: string; at: Date }> = [];
+	private auditLog: AuditRecord[] = [];
 	private nextId = 1;
+	private txQueue: Promise<unknown> = Promise.resolve();
 
 	private newId(prefix: string): string {
 		return `${prefix}-${this.nextId++}`;
@@ -77,6 +80,19 @@ export class MemoryStorageAdapter implements StorageAdapter {
 		);
 	}
 
+	async findAudit(query: FindAuditQuery): Promise<AuditRecord[]> {
+		return this.auditLog
+			.filter(
+				(a) =>
+					a.definitionId === query.definitionId &&
+					(query.scopeKind === undefined ||
+						a.scopeKind === query.scopeKind) &&
+					(query.scopeRefId === undefined ||
+						a.scopeRefId === query.scopeRefId),
+			)
+			.sort((a, b) => a.at.getTime() - b.at.getTime());
+	}
+
 	async createDef(input: CreateDefInput): Promise<DefRecord> {
 		const existingVersions = this.defs.filter((d) => d.key === input.key);
 		const version =
@@ -116,7 +132,9 @@ export class MemoryStorageAdapter implements StorageAdapter {
 	}
 
 	async transact<T>(fn: (tx: StorageTx) => Promise<T>): Promise<T> {
-		return fn(this.tx());
+		const run = this.txQueue.then(() => fn(this.tx()));
+		this.txQueue = run.catch(() => {});
+		return run;
 	}
 
 	private latestByStatus(
@@ -162,7 +180,7 @@ export class MemoryStorageAdapter implements StorageAdapter {
 				return record;
 			},
 
-			createAudit: async (input: CreateAuditInput) => {
+			createAudit: async (input: CreateAuditInput): Promise<void> => {
 				this.auditLog.push({
 					...input,
 					id: this.newId('audit'),

@@ -89,6 +89,7 @@ describe('Writer', () => {
 			findDefs: jest.fn(),
 			findValues: jest.fn(),
 			findChainValues: jest.fn(),
+			findAudit: jest.fn(),
 			createDef: jest.fn(),
 			listDefs: jest.fn(),
 			transact: jest.fn((fn: (tx: StorageTx) => Promise<unknown>) =>
@@ -343,6 +344,78 @@ describe('Writer', () => {
 
 			const auditCall = tx.createAudit.mock.calls[0][0];
 			expect(auditCall.after).toMatchObject({ num: 50 });
+		});
+	});
+
+	describe('unset', () => {
+		it('closes the active value and audits an "unset" action', async () => {
+			tx.findDef.mockResolvedValue(numericDef);
+			tx.findValue.mockResolvedValue(
+				baseValueRow({ id: 'v1', num: 50, version: 1 }),
+			);
+
+			await writer.unset({
+				key: 'contribution.amount',
+				scope: { kind: 'entity', refId: 'e1' },
+				expectedVersion: 1,
+				authorId: 'u1',
+			});
+
+			expect(tx.closeValue).toHaveBeenCalledWith('v1');
+			expect(tx.createValue).not.toHaveBeenCalled();
+			expect(tx.createAudit).toHaveBeenCalledWith(
+				expect.objectContaining({ valueId: 'v1', action: 'unset' }),
+			);
+			expect(bus.publish).toHaveBeenCalledWith({
+				definitionId: 'def-1',
+				key: 'contribution.amount',
+				scopeKind: 'entity',
+				scopeRefId: 'e1',
+			});
+		});
+
+		it('is a no-op when there is nothing to unset', async () => {
+			tx.findDef.mockResolvedValue(numericDef);
+			tx.findValue.mockResolvedValue(null);
+
+			await writer.unset({
+				key: 'contribution.amount',
+				scope: { kind: 'entity', refId: 'e1' },
+				authorId: 'u1',
+			});
+
+			expect(tx.closeValue).not.toHaveBeenCalled();
+			expect(bus.publish).not.toHaveBeenCalled();
+		});
+
+		it('throws ConflictError on a stale expectedVersion', async () => {
+			tx.findDef.mockResolvedValue(numericDef);
+			tx.findValue.mockResolvedValue(
+				baseValueRow({ id: 'v1', num: 50, version: 3 }),
+			);
+
+			await expect(
+				writer.unset({
+					key: 'contribution.amount',
+					scope: { kind: 'entity', refId: 'e1' },
+					expectedVersion: 1,
+					authorId: 'u1',
+				}),
+			).rejects.toThrow(ConflictError);
+
+			expect(tx.closeValue).not.toHaveBeenCalled();
+		});
+
+		it('throws NotFoundError for an unknown key', async () => {
+			tx.findDef.mockResolvedValue(null);
+
+			await expect(
+				writer.unset({
+					key: 'unknown',
+					scope: { kind: 'entity', refId: 'e1' },
+					authorId: 'u1',
+				}),
+			).rejects.toThrow(NotFoundError);
 		});
 	});
 
