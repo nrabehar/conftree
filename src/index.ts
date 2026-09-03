@@ -10,3 +10,8 @@ export * from './engine/writer';
 export * from './engine/auditor';
 export * from './engine/hierarchy-cache-sync';
 export * from './engine/engine';
+export * from './typed/registry';
+export * from './typed/typed-resolver';
+export * from './typed/typed-writer';
+export * from './typed/typed-auditor';
+export * from './typed/typed-engine';

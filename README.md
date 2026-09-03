@@ -96,6 +96,31 @@ await hierarchy.move('team-1', 'org-2');
 await hierarchy.detach('team-1');
 ```
 
+### Typed settings registry
+
+Get autocomplete and compile-time checking on keys, scopes, and value types by declaring your settings once and wrapping the engine:
+
+```ts
+import { createEngine, createTypedEngine } from '@nrabehar/sfleg';
+
+interface Registry {
+	'ui.theme': { value: 'light' | 'dark' | 'system'; scope: 'user' };
+	'chama.contributionAmount': { value: number; scope: 'group' | 'member' };
+}
+
+const { resolver, writer } = createTypedEngine<Registry>(createEngine());
+
+await writer.set({
+	key: 'ui.theme',
+	scope: { kind: 'user', refId: 'u1' },
+	value: 'dark', // only 'light' | 'dark' | 'system' is accepted
+	authorId: 'u1',
+});
+await resolver.get('ui.theme', { kind: 'user', refId: 'u1' }); // typed 'light' | 'dark' | 'system'
+```
+
+`Registry` must be a plain interface/type (not `extends` anything with an index signature) for key-level narrowing to work — see `src/typed/registry.ts` for the `SettingValue`/`SettingScopeKind` helpers this is built on.
+
 ### Writing an adapter
 
 Implement `StorageAdapter`, `ScopeHierarchy`, or `ChangeBus`, all defined in `src/storage/storage-port.ts`, `src/core/types.ts`, and `src/cache/change-bus.ts`. `MemoryStorageAdapter` and `LocalScopeHierarchy` are the reference implementations.
@@ -107,6 +132,7 @@ Implement `StorageAdapter`, `ScopeHierarchy`, or `ChangeBus`, all defined in `sr
 - `writer.set(params)`, `writer.setMany(paramsList)`, `writer.unset(params)`
 - `auditor.history(key, scope?)`
 - `storage.updateDefStatus(key, status)`
+- `createTypedEngine<Registry>(engine)`: returns `{ resolver, writer, auditor }` typed against your own key/value/scope registry.
 
 ### Errors
 
