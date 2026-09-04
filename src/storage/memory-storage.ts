@@ -94,11 +94,21 @@ export class MemoryStorageAdapter implements StorageAdapter {
 
 	async listValues(query: ListValuesQuery): Promise<ListValuesResult> {
 		const now = new Date();
+		const categoryDefIds =
+			query.category !== undefined
+				? new Set(
+						this.defs
+							.filter((d) => d.category === query.category)
+							.map((d) => d.id),
+					)
+				: null;
 		const active = this.values
 			.filter(
 				(v) =>
 					v.scopeKind === query.scopeKind &&
 					v.scopeRefId === query.scopeRefId &&
+					(categoryDefIds === null ||
+						categoryDefIds.has(v.definitionId)) &&
 					v.validFrom <= now &&
 					(v.validTo === null || v.validTo > now),
 			)

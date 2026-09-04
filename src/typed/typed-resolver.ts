@@ -3,7 +3,10 @@ import type { Resolver } from '../engine/resolver';
 import type { SettingScopeKind, SettingValue } from './registry';
 
 export class TypedResolver<Registry> {
-	constructor(private readonly resolver: Resolver) {}
+	constructor(
+		private readonly resolver: Resolver,
+		private readonly fixedCategory?: string,
+	) {}
 
 	get<K extends keyof Registry & string>(
 		key: K,
@@ -33,7 +36,10 @@ export class TypedResolver<Registry> {
 		}>;
 		nextCursor: string | null;
 	}> {
-		const page = await this.resolver.listAt(scope, opts);
+		const page = await this.resolver.listAt(scope, {
+			...opts,
+			category: this.fixedCategory,
+		});
 		return page as {
 			entries: Partial<{
 				[K in keyof Registry & string]: SettingValue<Registry, K>;

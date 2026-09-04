@@ -503,6 +503,22 @@ describe('Resolver', () => {
 			});
 			expect(result).toEqual({ entries: {}, nextCursor: 'v10' });
 		});
+
+		it('forwards category to storage.listValues', async () => {
+			storage.listValues.mockResolvedValue({
+				values: [],
+				nextCursor: null,
+			});
+
+			await resolver.listAt(
+				{ kind: 'entity', refId: 'e1' },
+				{ category: 'chama' },
+			);
+
+			expect(storage.listValues).toHaveBeenCalledWith(
+				expect.objectContaining({ category: 'chama' }),
+			);
+		});
 	});
 
 	describe('cache', () => {

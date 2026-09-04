@@ -34,11 +34,12 @@ export class Resolver {
 
 	async listAt(
 		scope: Scope,
-		opts: { limit?: number; cursor?: string } = {},
+		opts: { limit?: number; cursor?: string; category?: string } = {},
 	): Promise<ListAtPage> {
 		const { values, nextCursor } = await this.storage.listValues({
 			scopeKind: scope.kind,
 			scopeRefId: scope.refId,
+			category: opts.category,
 			limit: opts.limit,
 			cursor: opts.cursor,
 		});

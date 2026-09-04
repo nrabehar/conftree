@@ -1,5 +1,6 @@
 import { MemoryStorageAdapter } from './memory-storage';
 import { NotFoundError } from '../core/errors';
+import type { DefRecord } from '../core/types';
 
 describe('MemoryStorageAdapter', () => {
 	let storage: MemoryStorageAdapter;
@@ -184,6 +185,127 @@ describe('MemoryStorageAdapter', () => {
 				...secondPage.values.map((v) => v.id),
 			]);
 			expect(allIds.size).toBe(4);
+		});
+
+		it('filters by category, joining against the owning definition', async () => {
+			const chamaDef = await storage.createDef({
+				key: 'chama.amount',
+				label: 'Amount',
+				type: 'NUMERIC',
+				scopes: ['group'],
+				inherit: 'INDEPENDENT',
+				required: false,
+				status: 'STABLE',
+				category: 'chama',
+			});
+			const uiDef = await storage.createDef({
+				key: 'ui.theme',
+				label: 'Theme',
+				type: 'TEXT',
+				scopes: ['group'],
+				inherit: 'INDEPENDENT',
+				required: false,
+				status: 'STABLE',
+				category: 'ui',
+			});
+			await storage.transact(async (tx) => {
+				await tx.createValue({
+					definitionId: chamaDef.id,
+					scopeKind: 'group',
+					scopeRefId: 'g1',
+					version: 1,
+					authorId: 'a',
+					type: 'NUMERIC',
+					value: 100,
+				});
+				await tx.createValue({
+					definitionId: uiDef.id,
+					scopeKind: 'group',
+					scopeRefId: 'g1',
+					version: 1,
+					authorId: 'a',
+					type: 'TEXT',
+					value: 'dark',
+				});
+			});
+
+			const page = await storage.listValues({
+				scopeKind: 'group',
+				scopeRefId: 'g1',
+				category: 'chama',
+			});
+
+			expect(page.values).toHaveLength(1);
+			expect(page.values[0].definitionId).toBe(chamaDef.id);
+		});
+
+		it('paginates correctly within a category filter', async () => {
+			const defs: DefRecord[] = [];
+			for (let i = 0; i < 3; i++) {
+				defs.push(
+					await storage.createDef({
+						key: `chama.k${i}`,
+						label: `K${i}`,
+						type: 'NUMERIC',
+						scopes: ['group'],
+						inherit: 'INDEPENDENT',
+						required: false,
+						status: 'STABLE',
+						category: 'chama',
+					}),
+				);
+			}
+			const otherDef = await storage.createDef({
+				key: 'ui.theme',
+				label: 'Theme',
+				type: 'TEXT',
+				scopes: ['group'],
+				inherit: 'INDEPENDENT',
+				required: false,
+				status: 'STABLE',
+				category: 'ui',
+			});
+			await storage.transact(async (tx) => {
+				for (const def of defs) {
+					await tx.createValue({
+						definitionId: def.id,
+						scopeKind: 'group',
+						scopeRefId: 'g1',
+						version: 1,
+						authorId: 'a',
+						type: 'NUMERIC',
+						value: 1,
+					});
+				}
+				await tx.createValue({
+					definitionId: otherDef.id,
+					scopeKind: 'group',
+					scopeRefId: 'g1',
+					version: 1,
+					authorId: 'a',
+					type: 'TEXT',
+					value: 'dark',
+				});
+			});
+
+			const firstPage = await storage.listValues({
+				scopeKind: 'group',
+				scopeRefId: 'g1',
+				category: 'chama',
+				limit: 2,
+			});
+			expect(firstPage.values).toHaveLength(2);
+			expect(firstPage.nextCursor).not.toBeNull();
+
+			const secondPage = await storage.listValues({
+				scopeKind: 'group',
+				scopeRefId: 'g1',
+				category: 'chama',
+				limit: 2,
+				cursor: firstPage.nextCursor!,
+			});
+			expect(secondPage.values).toHaveLength(1);
+			expect(secondPage.nextCursor).toBeNull();
 		});
 	});
 

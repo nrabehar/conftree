@@ -75,6 +75,7 @@ export interface FindAuditQuery {
 export interface ListValuesQuery {
 	scopeKind: string;
 	scopeRefId: string | null;
+	category?: string;
 	limit?: number;
 	cursor?: string;
 }

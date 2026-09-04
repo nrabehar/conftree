@@ -2,8 +2,16 @@ import { createEngine } from '../engine/engine';
 import { createTypedEngine } from './typed-engine';
 
 interface Registry {
-	'chama.contributionAmount': { value: number; scope: 'group' | 'member' };
-	'chama.currency': { value: string; scope: 'group' | 'member' };
+	'chama.contributionAmount': {
+		value: number;
+		scope: 'group' | 'member';
+		category: 'chama';
+	};
+	'chama.currency': {
+		value: string;
+		scope: 'group' | 'member';
+		category: 'chama';
+	};
 	'ui.theme': { value: 'light' | 'dark' | 'system'; scope: 'user' };
 }
 
@@ -18,6 +26,7 @@ describe('createTypedEngine', () => {
 			inherit: 'INHERITABLE_OVERRIDABLE',
 			required: false,
 			status: 'STABLE',
+			category: 'chama',
 		});
 		await engine.storage.createDef({
 			key: 'chama.currency',
@@ -27,6 +36,7 @@ describe('createTypedEngine', () => {
 			inherit: 'INHERITABLE_OVERRIDABLE',
 			required: false,
 			status: 'STABLE',
+			category: 'chama',
 		});
 		await engine.storage.createDef({
 			key: 'ui.theme',
@@ -126,5 +136,71 @@ describe('createTypedEngine', () => {
 			refId: 'u1',
 		});
 		expect(entries['ui.theme']).toBe('light');
+	});
+
+	describe('category()', () => {
+		it('scopes get()/set() to only the keys in that category, at the type level, with unchanged runtime behavior', async () => {
+			const { category } = await setup();
+			const chama = category('chama');
+
+			await chama.writer.set({
+				key: 'chama.contributionAmount',
+				scope: { kind: 'group', refId: 'g1' },
+				value: 7500,
+				authorId: 'admin',
+			});
+
+			const value = await chama.resolver.get('chama.contributionAmount', {
+				kind: 'group',
+				refId: 'g1',
+			});
+			expect(value).toBe(7500);
+		});
+
+		it('listAt() is filtered server-side to only that category, even when other categories are set at the same scope', async () => {
+			const { category, writer } = await setup();
+			const chama = category('chama');
+
+			await writer.set({
+				key: 'chama.contributionAmount',
+				scope: { kind: 'group', refId: 'g1' },
+				value: 5000,
+				authorId: 'admin',
+			});
+			await writer.set({
+				key: 'chama.currency',
+				scope: { kind: 'group', refId: 'g1' },
+				value: 'KES',
+				authorId: 'admin',
+			});
+
+			const { entries } = await chama.resolver.listAt({
+				kind: 'group',
+				refId: 'g1',
+			});
+
+			expect(entries).toEqual({
+				'chama.contributionAmount': 5000,
+				'chama.currency': 'KES',
+			});
+		});
+
+		it('a key with no category declared in the registry is excluded from every category view', async () => {
+			const { category, writer } = await setup();
+
+			await writer.set({
+				key: 'ui.theme',
+				scope: { kind: 'user', refId: 'u1' },
+				value: 'dark',
+				authorId: 'u1',
+			});
+
+			const { entries } = await category('chama').resolver.listAt({
+				kind: 'user',
+				refId: 'u1',
+			});
+
+			expect(entries).toEqual({});
+		});
 	});
 });

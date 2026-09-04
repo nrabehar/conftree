@@ -129,6 +129,42 @@ await resolver.get('ui.theme', { kind: 'user', refId: 'u1' }); // typed 'light' 
 
 `Registry` must be a plain interface/type (not `extends` anything with an index signature) for key-level narrowing to work — see `src/typed/registry.ts` for the `SettingValue`/`SettingScopeKind` helpers this is built on.
 
+#### Scoping to a category
+
+Tag registry entries with `category` (matching the `category` you pass to `storage.createDef`) to derive a fully-typed sub-engine for just that subset of keys — `get`/`set`/`unset` are narrowed at compile time, and `listAt` is filtered server-side (correct pagination, not a client-side `Array.filter`):
+
+```ts
+interface Registry {
+	'ui.theme': { value: 'light' | 'dark' | 'system'; scope: 'user' };
+	'chama.contributionAmount': {
+		value: number;
+		scope: 'group' | 'member';
+		category: 'chama';
+	};
+	'chama.currency': {
+		value: string;
+		scope: 'group' | 'member';
+		category: 'chama';
+	};
+}
+
+const engine = createTypedEngine<Registry>(createEngine());
+const chama = engine.category('chama');
+
+await chama.writer.set({
+	key: 'chama.contributionAmount', // 'ui.theme' would be a compile error here
+	scope: { kind: 'group', refId: 'g1' },
+	value: 5000,
+	authorId: 'admin',
+});
+
+await chama.resolver.listAt({ kind: 'group', refId: 'g1' });
+// { entries: { 'chama.contributionAmount': 5000, 'chama.currency': 'KES' }, nextCursor: null }
+// — only chama.* keys, even if other categories are also set at that scope
+```
+
+A key with no `category` in the registry (like `ui.theme` above) simply never shows up in any `category(...)` view.
+
 ### Writing an adapter
 
 Implement `StorageAdapter`, `ScopeHierarchy`, or `ChangeBus`, all defined in `src/storage/storage-port.ts`, `src/core/types.ts`, and `src/cache/change-bus.ts`. `MemoryStorageAdapter` and `LocalScopeHierarchy` are the reference implementations.
@@ -136,11 +172,11 @@ Implement `StorageAdapter`, `ScopeHierarchy`, or `ChangeBus`, all defined in `sr
 ## API
 
 - `createEngine(options?)`: returns `{ storage, hierarchy, bus, cache, resolver, writer, auditor }`.
-- `resolver.get(key, scope, asOf?)`, `resolver.getMany(keys, scope, asOf?)`, `resolver.listAt(scope, { limit?, cursor? })`
+- `resolver.get(key, scope, asOf?)`, `resolver.getMany(keys, scope, asOf?)`, `resolver.listAt(scope, { limit?, cursor?, category? })`
 - `writer.set(params)`, `writer.setMany(paramsList)`, `writer.unset(params)`
 - `auditor.history(key, scope?)`
 - `storage.updateDefStatus(key, status)`
-- `createTypedEngine<Registry>(engine)`: returns `{ resolver, writer, auditor }` typed against your own key/value/scope registry.
+- `createTypedEngine<Registry>(engine)`: returns `{ resolver, writer, auditor, category(name) }` typed against your own key/value/scope/category registry. `category(name)` returns the same shape, narrowed to that category's keys.
 
 ### Errors
 
