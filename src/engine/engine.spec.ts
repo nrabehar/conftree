@@ -1,5 +1,5 @@
 import { createEngine } from './engine';
-import { ConflictError, NotFoundError } from '../core/errors';
+import { CategoryError, ConflictError, NotFoundError } from '../core/errors';
 
 describe('createEngine (end-to-end, zero config)', () => {
 	it('supports simple per-user preferences with no hierarchy at all (todo-app use case)', async () => {
@@ -474,5 +474,38 @@ describe('createEngine (end-to-end, zero config)', () => {
 		await expect(
 			resolver.get('a', { kind: 'user', refId: 'u1' }),
 		).rejects.toThrow();
+	});
+
+	it('createEngine() guards against two unrelated features accidentally colliding on the same key with different categories', async () => {
+		const { storage } = createEngine();
+
+		await storage.createDef({
+			key: 'amount',
+			label: 'Chama contribution amount',
+			type: 'NUMERIC',
+			scopes: ['group'],
+			inherit: 'INDEPENDENT',
+			required: false,
+			status: 'STABLE',
+			category: 'chama',
+		});
+
+		await expect(
+			storage.createDef({
+				key: 'amount',
+				label: 'Billing invoice amount',
+				type: 'NUMERIC',
+				scopes: ['group'],
+				inherit: 'INDEPENDENT',
+				required: false,
+				status: 'STABLE',
+				category: 'billing',
+			}),
+		).rejects.toThrow(CategoryError);
+
+		// the original chama definition must be untouched
+		const rows = await storage.listDefs();
+		expect(rows).toHaveLength(1);
+		expect(rows[0].category).toBe('chama');
 	});
 });

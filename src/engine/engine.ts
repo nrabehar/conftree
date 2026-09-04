@@ -3,6 +3,7 @@ import { LocalBus } from '../cache/change-bus';
 import type { CacheOptions } from '../cache/cache';
 import { Cache } from '../cache/cache';
 import { withHierarchyInvalidation } from './hierarchy-cache-sync';
+import { withCategoryIntegrity } from './category-integrity';
 import { MemoryStorageAdapter } from '../storage/memory-storage';
 import { Resolver } from './resolver';
 import { LocalScopeHierarchy } from '../hierarchy/scope-hierarchy';
@@ -29,7 +30,9 @@ export interface Engine {
 }
 
 export function createEngine(options: EngineOptions = {}): Engine {
-	const storage = options.storage ?? new MemoryStorageAdapter();
+	const storage = withCategoryIntegrity(
+		options.storage ?? new MemoryStorageAdapter(),
+	);
 	const rawHierarchy = options.hierarchy ?? new LocalScopeHierarchy();
 	const bus = options.bus ?? new LocalBus();
 	const cacheOptions =

@@ -81,11 +81,11 @@ export class CycleError extends ConfTreeError {
 export class CategoryError extends ConfTreeError {
 	constructor(
 		key: string,
-		expectedCategory: string,
+		expectedCategory: string | null,
 		actualCategory: string | null,
 	) {
 		super(
-			`Setting "${key}" belongs to category "${actualCategory ?? 'none'}", not "${expectedCategory}"`,
+			`Setting "${key}" has category "${actualCategory ?? 'none'}", which does not match "${expectedCategory ?? 'none'}"`,
 			'CATEGORY',
 		);
 	}

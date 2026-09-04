@@ -12,6 +12,7 @@ This package was previously published as `@nrabehar/sfleg`; `conftree` starts it
 - `TypedEngine.category(name)`: a fully-typed sub-engine (`resolver`/`writer`/`auditor`) narrowed at compile time to the keys declared with that `category` in the registry. A runtime check (`CategoryError`, code `'CATEGORY'`) catches any access to a key from another category if a caller bypasses the type narrowing (e.g. via `as any`).
 - `storage.listDefs(status?, category?)`: added a `category` filter alongside the existing `status` filter.
 - `storage.listCategories()`: lists every distinct category currently in use, across the latest version of each definition.
+- `createEngine()` now wraps `storage` with a category-integrity guard: redefining an existing key (`storage.createDef()`) under a different `category` than its current one now throws `CategoryError` instead of silently corrupting the definition. Applies regardless of the `StorageAdapter` used, not just `MemoryStorageAdapter`.
 
 ### Fixed
 

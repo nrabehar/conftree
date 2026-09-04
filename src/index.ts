@@ -9,6 +9,7 @@ export * from './engine/resolver';
 export * from './engine/writer';
 export * from './engine/auditor';
 export * from './engine/hierarchy-cache-sync';
+export * from './engine/category-integrity';
 export * from './engine/engine';
 export * from './typed/registry';
 export * from './typed/category-guard';

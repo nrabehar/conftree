@@ -167,6 +167,8 @@ A key with no `category` in the registry (like `ui.theme` above) simply never sh
 
 `get`/`set`/`unset`/`history` on a `category(...)` accessor are narrowed at compile time — but if a caller bypasses that with `as any`, a runtime check still catches it and throws `CategoryError` (code `'CATEGORY'`) rather than silently touching a setting from another category.
 
+`createEngine()` also guards `storage.createDef()` itself: if two unrelated features accidentally pick the same `key` string with different `category` values, the second `createDef()` call throws `CategoryError` instead of silently redefining the existing setting under the new category. Redefining a key with the _same_ category (a normal evolution of a setting) still works exactly as before. This guard is applied automatically to whatever `StorageAdapter` you pass in, not just `MemoryStorageAdapter`.
+
 ### Writing an adapter
 
 Implement `StorageAdapter`, `ScopeHierarchy`, or `ChangeBus`, all defined in `src/storage/storage-port.ts`, `src/core/types.ts`, and `src/cache/change-bus.ts`. `MemoryStorageAdapter` and `LocalScopeHierarchy` are the reference implementations.
