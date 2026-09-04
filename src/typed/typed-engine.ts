@@ -5,33 +5,38 @@ import { TypedAuditor } from './typed-auditor';
 import { CategoryGuard } from './category-guard';
 import type { KeysInCategory } from './registry';
 
-export interface TypedEngine<Registry> {
-	resolver: TypedResolver<Registry>;
-	writer: TypedWriter<Registry>;
-	auditor: TypedAuditor<Registry>;
+export interface TypedEngine<
+	Registry,
+	Category extends string | undefined = undefined,
+> {
+	resolver: TypedResolver<Registry, Category>;
+	writer: TypedWriter<Registry, Category>;
+	auditor: TypedAuditor<Registry, Category>;
 	category<C extends string>(
 		category: C,
-	): TypedEngine<KeysInCategory<Registry, C>>;
+	): TypedEngine<KeysInCategory<Registry, C>, C>;
 }
 
 export function createTypedEngine<Registry>(
 	engine: Engine,
 ): TypedEngine<Registry> {
-	function build<R>(fixedCategory?: string): TypedEngine<R> {
+	function build<R, C extends string | undefined>(
+		fixedCategory?: C,
+	): TypedEngine<R, C> {
 		const guard = fixedCategory
 			? new CategoryGuard(engine.storage, fixedCategory)
 			: undefined;
 		return {
-			resolver: new TypedResolver<R>(
+			resolver: new TypedResolver<R, C>(
 				engine.resolver,
 				fixedCategory,
 				guard,
 			),
-			writer: new TypedWriter<R>(engine.writer, guard),
-			auditor: new TypedAuditor<R>(engine.auditor, guard),
-			category: <C extends string>(category: C) =>
-				build<KeysInCategory<R, C>>(category),
+			writer: new TypedWriter<R, C>(engine.writer, guard),
+			auditor: new TypedAuditor<R, C>(engine.auditor, guard),
+			category: <C2 extends string>(category: C2) =>
+				build<KeysInCategory<R, C2>, C2>(category),
 		};
 	}
-	return build<Registry>();
+	return build<Registry, undefined>();
 }

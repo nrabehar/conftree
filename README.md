@@ -165,6 +165,20 @@ await chama.resolver.listAt({ kind: 'group', refId: 'g1' });
 
 A key with no `category` in the registry (like `ui.theme` above) simply never shows up in any `category(...)` view.
 
+Since a key must stay globally unique across every category, real key names tend to be prefixed with their category (`'chama.currency'`) — which becomes pure repetition once you're already inside `category('chama')`. So `get`/`set`/`unset`/`history` on a `category(...)` accessor also accept the key with that `${category}.` prefix stripped:
+
+```ts
+await chama.writer.set({
+	key: 'currency', // same as 'chama.currency'
+	scope: { kind: 'group', refId: 'g1' },
+	value: 'KES',
+	authorId: 'admin',
+});
+await chama.resolver.get('currency', { kind: 'group', refId: 'g1' }); // 'KES'
+```
+
+The full key (`'chama.currency'`) still works exactly as before on the same accessor — both forms address the same setting. If a given string happens to already be a real, existing key (regardless of category), it's treated as a full key as-is rather than guessed at; only when it doesn't match anything is it prefixed and treated as short. `getMany`'s result is keyed however you called it (short or full, per key).
+
 `get`/`set`/`unset`/`history` on a `category(...)` accessor are narrowed at compile time — but if a caller bypasses that with `as any`, a runtime check still catches it and throws `CategoryError` (code `'CATEGORY'`) rather than silently touching a setting from another category.
 
 `createEngine()` also guards `storage.createDef()` itself: if two unrelated features accidentally pick the same `key` string with different `category` values, the second `createDef()` call throws `CategoryError` instead of silently redefining the existing setting under the new category. Redefining a key with the _same_ category (a normal evolution of a setting) still works exactly as before. This guard is applied automatically to whatever `StorageAdapter` you pass in, not just `MemoryStorageAdapter`.

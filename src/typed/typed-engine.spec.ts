@@ -13,6 +13,11 @@ interface Registry {
 		scope: 'group' | 'member';
 		category: 'chama';
 	};
+	'chama.limits.maxContribution': {
+		value: number;
+		scope: 'group' | 'member';
+		category: 'chama';
+	};
 	'ui.theme': { value: 'light' | 'dark' | 'system'; scope: 'user' };
 }
 
@@ -33,6 +38,16 @@ describe('createTypedEngine', () => {
 			key: 'chama.currency',
 			label: 'Currency',
 			type: 'TEXT',
+			scopes: ['group', 'member'],
+			inherit: 'INHERITABLE_OVERRIDABLE',
+			required: false,
+			status: 'STABLE',
+			category: 'chama',
+		});
+		await engine.storage.createDef({
+			key: 'chama.limits.maxContribution',
+			label: 'Max contribution',
+			type: 'NUMERIC',
 			scopes: ['group', 'member'],
 			inherit: 'INHERITABLE_OVERRIDABLE',
 			required: false,
@@ -244,6 +259,169 @@ describe('createTypedEngine', () => {
 			await expect(
 				resolver.get('ui.theme', { kind: 'user', refId: 'u1' }),
 			).resolves.toBe('dark');
+		});
+	});
+
+	describe('short keys on a category() accessor', () => {
+		it('set()/get() accept the key with the category prefix stripped', async () => {
+			const { category } = await setup();
+			const chama = category('chama');
+
+			await chama.writer.set({
+				key: 'currency',
+				scope: { kind: 'group', refId: 'g1' },
+				value: 'KES',
+				authorId: 'admin',
+			});
+
+			const value = await chama.resolver.get('currency', {
+				kind: 'group',
+				refId: 'g1',
+			});
+			expect(value).toBe('KES');
+		});
+
+		it('strips only the leading `category.` prefix, keeping the rest of a multi-segment key intact', async () => {
+			const { category } = await setup();
+			const chama = category('chama');
+
+			await chama.writer.set({
+				key: 'limits.maxContribution',
+				scope: { kind: 'group', refId: 'g1' },
+				value: 10000,
+				authorId: 'admin',
+			});
+
+			const value = await chama.resolver.get('limits.maxContribution', {
+				kind: 'group',
+				refId: 'g1',
+			});
+			expect(value).toBe(10000);
+		});
+
+		it('still accepts the full key on a category() accessor, unchanged (backward compatible)', async () => {
+			const { category } = await setup();
+			const chama = category('chama');
+
+			await chama.writer.set({
+				key: 'chama.currency',
+				scope: { kind: 'group', refId: 'g1' },
+				value: 'KES',
+				authorId: 'admin',
+			});
+
+			const value = await chama.resolver.get('chama.currency', {
+				kind: 'group',
+				refId: 'g1',
+			});
+			expect(value).toBe('KES');
+		});
+
+		it('short and full key forms address the exact same underlying setting', async () => {
+			const { category } = await setup();
+			const chama = category('chama');
+
+			await chama.writer.set({
+				key: 'currency',
+				scope: { kind: 'group', refId: 'g1' },
+				value: 'KES',
+				authorId: 'admin',
+			});
+
+			await expect(
+				chama.resolver.get('chama.currency', {
+					kind: 'group',
+					refId: 'g1',
+				}),
+			).resolves.toBe('KES');
+
+			await expect(
+				chama.writer.set({
+					key: 'chama.currency',
+					scope: { kind: 'group', refId: 'g1' },
+					value: 'UGX',
+					expectedVersion: 1,
+					authorId: 'admin',
+				}),
+			).resolves.toMatchObject({ version: 2 });
+		});
+
+		it('getMany() accepts a mix of short and full keys and keys the result the same way it was called', async () => {
+			const { category, writer } = await setup();
+			const chama = category('chama');
+
+			await writer.set({
+				key: 'chama.contributionAmount',
+				scope: { kind: 'group', refId: 'g1' },
+				value: 5000,
+				authorId: 'admin',
+			});
+			await writer.set({
+				key: 'chama.currency',
+				scope: { kind: 'group', refId: 'g1' },
+				value: 'KES',
+				authorId: 'admin',
+			});
+
+			const values = await chama.resolver.getMany(
+				['contributionAmount', 'chama.currency'] as const,
+				{ kind: 'group', refId: 'g1' },
+			);
+
+			expect(values).toEqual({
+				contributionAmount: 5000,
+				'chama.currency': 'KES',
+			});
+		});
+
+		it('unset() and auditor.history() also accept the short key', async () => {
+			const { category } = await setup();
+			const chama = category('chama');
+
+			await chama.writer.set({
+				key: 'currency',
+				scope: { kind: 'group', refId: 'g1' },
+				value: 'KES',
+				authorId: 'admin',
+			});
+			await chama.writer.unset({
+				key: 'currency',
+				scope: { kind: 'group', refId: 'g1' },
+				expectedVersion: 1,
+				authorId: 'admin',
+			});
+
+			await expect(
+				chama.resolver.get('currency', {
+					kind: 'group',
+					refId: 'g1',
+				}),
+			).rejects.toThrow();
+
+			const history = await chama.auditor.history('currency');
+			expect(history.map((h) => h.action)).toEqual(['created', 'unset']);
+		});
+
+		it('a short key that happens to collide with a real key from another category is rejected, not silently misread', async () => {
+			const { category, writer } = await setup();
+			await writer.set({
+				key: 'ui.theme',
+				scope: { kind: 'user', refId: 'u1' },
+				value: 'dark',
+				authorId: 'u1',
+			});
+			const chama = category('chama') as unknown as {
+				resolver: {
+					get: (key: string, scope: unknown) => Promise<unknown>;
+				};
+			};
+
+			// 'ui.theme' is a real, existing key belonging to a different category —
+			// it must be rejected as a cross-category access, not reinterpreted as
+			// the (nonsensical) short key "ui.theme" prefixed into "chama.ui.theme".
+			await expect(
+				chama.resolver.get('ui.theme', { kind: 'user', refId: 'u1' }),
+			).rejects.toThrow(CategoryError);
 		});
 	});
 });

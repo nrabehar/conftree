@@ -24,3 +24,31 @@ export type KeysInCategory<Registry, C extends string> = {
 			: never
 	]: Registry[K];
 };
+
+export type StripCategoryPrefix<
+	K extends string,
+	Category extends string,
+> = K extends `${Category}.${infer Rest}` ? Rest : never;
+
+export type ShortKeys<Registry, Category extends string> = {
+	[
+		K in keyof Registry & string as StripCategoryPrefix<K, Category>
+	]: Registry[K];
+};
+
+export type AcceptedKey<
+	Registry,
+	Category extends string | undefined,
+> = Category extends string
+	? (keyof Registry & string) | (keyof ShortKeys<Registry, Category> & string)
+	: keyof Registry & string;
+
+export type FullKeyFor<
+	Registry,
+	Category extends string | undefined,
+	K extends string,
+> = K extends keyof Registry
+	? K
+	: Category extends string
+		? `${Category}.${K}`
+		: never;
