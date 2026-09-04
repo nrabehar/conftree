@@ -165,6 +165,8 @@ await chama.resolver.listAt({ kind: 'group', refId: 'g1' });
 
 A key with no `category` in the registry (like `ui.theme` above) simply never shows up in any `category(...)` view.
 
+`get`/`set`/`unset`/`history` on a `category(...)` accessor are narrowed at compile time — but if a caller bypasses that with `as any`, a runtime check still catches it and throws `CategoryError` (code `'CATEGORY'`) rather than silently touching a setting from another category.
+
 ### Writing an adapter
 
 Implement `StorageAdapter`, `ScopeHierarchy`, or `ChangeBus`, all defined in `src/storage/storage-port.ts`, `src/core/types.ts`, and `src/cache/change-bus.ts`. `MemoryStorageAdapter` and `LocalScopeHierarchy` are the reference implementations.
@@ -176,11 +178,12 @@ Implement `StorageAdapter`, `ScopeHierarchy`, or `ChangeBus`, all defined in `sr
 - `writer.set(params)`, `writer.setMany(paramsList)`, `writer.unset(params)`
 - `auditor.history(key, scope?)`
 - `storage.updateDefStatus(key, status)`
+- `storage.listDefs(status?, category?)`, `storage.listCategories()`
 - `createTypedEngine<Registry>(engine)`: returns `{ resolver, writer, auditor, category(name) }` typed against your own key/value/scope/category registry. `category(name)` returns the same shape, narrowed to that category's keys.
 
 ### Errors
 
-All errors extend `ConfTreeError` and carry a stable `code` (e.g. `'CONFLICT'`, `'NOT_FOUND'`), in addition to a specific class (`ConflictError`, `NotFoundError`, ...) and `name`.
+All errors extend `ConfTreeError` and carry a stable `code` (e.g. `'CONFLICT'`, `'NOT_FOUND'`, `'CATEGORY'`), in addition to a specific class (`ConflictError`, `NotFoundError`, `CategoryError`, ...) and `name`.
 
 ## License
 

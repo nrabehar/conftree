@@ -404,4 +404,181 @@ describe('MemoryStorageAdapter', () => {
 			);
 		});
 	});
+
+	describe('listDefs', () => {
+		it('returns only the latest version of each key, not every version', async () => {
+			await storage.createDef({
+				key: 'k',
+				label: 'K v1',
+				type: 'NUMERIC',
+				scopes: ['user'],
+				inherit: 'INDEPENDENT',
+				required: false,
+				status: 'STABLE',
+			});
+			await storage.createDef({
+				key: 'k',
+				label: 'K v2',
+				type: 'NUMERIC',
+				scopes: ['user'],
+				inherit: 'INDEPENDENT',
+				required: false,
+				status: 'STABLE',
+			});
+
+			const rows = await storage.listDefs();
+
+			expect(rows).toHaveLength(1);
+			expect(rows[0].label).toBe('K v2');
+		});
+
+		it('filters by status', async () => {
+			await storage.createDef({
+				key: 'stable-one',
+				label: 'Stable',
+				type: 'NUMERIC',
+				scopes: ['user'],
+				inherit: 'INDEPENDENT',
+				required: false,
+				status: 'STABLE',
+			});
+			await storage.createDef({
+				key: 'draft-one',
+				label: 'Draft',
+				type: 'NUMERIC',
+				scopes: ['user'],
+				inherit: 'INDEPENDENT',
+				required: false,
+				status: 'DRAFT',
+			});
+
+			const rows = await storage.listDefs('STABLE');
+
+			expect(rows.map((d) => d.key)).toEqual(['stable-one']);
+		});
+
+		it('filters by category', async () => {
+			await storage.createDef({
+				key: 'chama.amount',
+				label: 'Amount',
+				type: 'NUMERIC',
+				scopes: ['group'],
+				inherit: 'INDEPENDENT',
+				required: false,
+				status: 'STABLE',
+				category: 'chama',
+			});
+			await storage.createDef({
+				key: 'ui.theme',
+				label: 'Theme',
+				type: 'TEXT',
+				scopes: ['user'],
+				inherit: 'INDEPENDENT',
+				required: false,
+				status: 'STABLE',
+				category: 'ui',
+			});
+
+			const rows = await storage.listDefs(undefined, 'chama');
+
+			expect(rows.map((d) => d.key)).toEqual(['chama.amount']);
+		});
+
+		it('combines status and category filters', async () => {
+			await storage.createDef({
+				key: 'chama.amount',
+				label: 'Amount',
+				type: 'NUMERIC',
+				scopes: ['group'],
+				inherit: 'INDEPENDENT',
+				required: false,
+				status: 'DRAFT',
+				category: 'chama',
+			});
+			await storage.createDef({
+				key: 'chama.currency',
+				label: 'Currency',
+				type: 'TEXT',
+				scopes: ['group'],
+				inherit: 'INDEPENDENT',
+				required: false,
+				status: 'STABLE',
+				category: 'chama',
+			});
+
+			const rows = await storage.listDefs('STABLE', 'chama');
+
+			expect(rows.map((d) => d.key)).toEqual(['chama.currency']);
+		});
+	});
+
+	describe('listCategories', () => {
+		it('returns every distinct category across the latest version of each def, sorted', async () => {
+			await storage.createDef({
+				key: 'ui.theme',
+				label: 'Theme',
+				type: 'TEXT',
+				scopes: ['user'],
+				inherit: 'INDEPENDENT',
+				required: false,
+				status: 'STABLE',
+				category: 'ui',
+			});
+			await storage.createDef({
+				key: 'chama.amount',
+				label: 'Amount',
+				type: 'NUMERIC',
+				scopes: ['group'],
+				inherit: 'INDEPENDENT',
+				required: false,
+				status: 'STABLE',
+				category: 'chama',
+			});
+			await storage.createDef({
+				key: 'chama.currency',
+				label: 'Currency',
+				type: 'TEXT',
+				scopes: ['group'],
+				inherit: 'INDEPENDENT',
+				required: false,
+				status: 'STABLE',
+				category: 'chama',
+			});
+			await storage.createDef({
+				key: 'uncategorized.thing',
+				label: 'Thing',
+				type: 'TEXT',
+				scopes: ['user'],
+				inherit: 'INDEPENDENT',
+				required: false,
+				status: 'STABLE',
+			});
+
+			expect(await storage.listCategories()).toEqual(['chama', 'ui']);
+		});
+
+		it('excludes a category whose only def has since been superseded by an uncategorized version', async () => {
+			await storage.createDef({
+				key: 'k',
+				label: 'K v1',
+				type: 'NUMERIC',
+				scopes: ['user'],
+				inherit: 'INDEPENDENT',
+				required: false,
+				status: 'STABLE',
+				category: 'chama',
+			});
+			await storage.createDef({
+				key: 'k',
+				label: 'K v2',
+				type: 'NUMERIC',
+				scopes: ['user'],
+				inherit: 'INDEPENDENT',
+				required: false,
+				status: 'STABLE',
+			});
+
+			expect(await storage.listCategories()).toEqual([]);
+		});
+	});
 });

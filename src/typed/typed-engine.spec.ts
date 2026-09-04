@@ -1,5 +1,6 @@
 import { createEngine } from '../engine/engine';
 import { createTypedEngine } from './typed-engine';
+import { CategoryError } from '../core/errors';
 
 interface Registry {
 	'chama.contributionAmount': {
@@ -201,6 +202,48 @@ describe('createTypedEngine', () => {
 			});
 
 			expect(entries).toEqual({});
+		});
+
+		it('throws CategoryError at runtime if a type-unsafe caller bypasses narrowing with a key from another category', async () => {
+			const { category } = await setup();
+			const chama = category('chama') as unknown as {
+				resolver: {
+					get: (key: string, scope: unknown) => Promise<unknown>;
+				};
+				writer: { set: (params: unknown) => Promise<unknown> };
+				auditor: { history: (key: string) => Promise<unknown> };
+			};
+
+			await expect(
+				chama.resolver.get('ui.theme', { kind: 'user', refId: 'u1' }),
+			).rejects.toThrow(CategoryError);
+
+			await expect(
+				chama.writer.set({
+					key: 'ui.theme',
+					scope: { kind: 'user', refId: 'u1' },
+					value: 'dark',
+					authorId: 'u1',
+				}),
+			).rejects.toThrow(CategoryError);
+
+			await expect(chama.auditor.history('ui.theme')).rejects.toThrow(
+				CategoryError,
+			);
+		});
+
+		it('does not throw for a key that legitimately has no category yet is accessed through the unscoped engine', async () => {
+			const { resolver, writer } = await setup();
+			await writer.set({
+				key: 'ui.theme',
+				scope: { kind: 'user', refId: 'u1' },
+				value: 'dark',
+				authorId: 'u1',
+			});
+
+			await expect(
+				resolver.get('ui.theme', { kind: 'user', refId: 'u1' }),
+			).resolves.toBe('dark');
 		});
 	});
 });

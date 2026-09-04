@@ -49,9 +49,13 @@ function withLatency(adapter: StorageAdapter, ms: number): StorageAdapter {
 			await delay();
 			return adapter.updateDefStatus(key, status);
 		},
-		listDefs: async (status) => {
+		listDefs: async (status, category) => {
 			await delay();
-			return adapter.listDefs(status);
+			return adapter.listDefs(status, category);
+		},
+		listCategories: async () => {
+			await delay();
+			return adapter.listCategories();
 		},
 		transact: async (fn) => {
 			await delay();

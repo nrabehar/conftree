@@ -110,7 +110,8 @@ export interface StorageTx {
 export interface StorageWriter {
 	createDef(input: CreateDefInput): Promise<DefRecord>;
 	updateDefStatus(key: string, status: Status): Promise<DefRecord>;
-	listDefs(status?: Status): Promise<DefRecord[]>;
+	listDefs(status?: Status, category?: string): Promise<DefRecord[]>;
+	listCategories(): Promise<string[]>;
 	transact<T>(fn: (tx: StorageTx) => Promise<T>): Promise<T>;
 }
 

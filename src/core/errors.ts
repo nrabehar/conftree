@@ -5,7 +5,8 @@ export type ErrorCode =
 	| 'VALUE'
 	| 'CONFLICT'
 	| 'CORRUPT'
-	| 'CYCLE';
+	| 'CYCLE'
+	| 'CATEGORY';
 
 export class ConfTreeError extends Error {
 	constructor(
@@ -73,6 +74,19 @@ export class CycleError extends ConfTreeError {
 		super(
 			`Cannot attach/move scope "${id}" under "${newParentId}": would create a cycle`,
 			'CYCLE',
+		);
+	}
+}
+
+export class CategoryError extends ConfTreeError {
+	constructor(
+		key: string,
+		expectedCategory: string,
+		actualCategory: string | null,
+	) {
+		super(
+			`Setting "${key}" belongs to category "${actualCategory ?? 'none'}", not "${expectedCategory}"`,
+			'CATEGORY',
 		);
 	}
 }

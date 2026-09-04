@@ -2,6 +2,7 @@ import type { Engine } from '../engine/engine';
 import { TypedResolver } from './typed-resolver';
 import { TypedWriter } from './typed-writer';
 import { TypedAuditor } from './typed-auditor';
+import { CategoryGuard } from './category-guard';
 import type { KeysInCategory } from './registry';
 
 export interface TypedEngine<Registry> {
@@ -17,10 +18,17 @@ export function createTypedEngine<Registry>(
 	engine: Engine,
 ): TypedEngine<Registry> {
 	function build<R>(fixedCategory?: string): TypedEngine<R> {
+		const guard = fixedCategory
+			? new CategoryGuard(engine.storage, fixedCategory)
+			: undefined;
 		return {
-			resolver: new TypedResolver<R>(engine.resolver, fixedCategory),
-			writer: new TypedWriter<R>(engine.writer),
-			auditor: new TypedAuditor<R>(engine.auditor),
+			resolver: new TypedResolver<R>(
+				engine.resolver,
+				fixedCategory,
+				guard,
+			),
+			writer: new TypedWriter<R>(engine.writer, guard),
+			auditor: new TypedAuditor<R>(engine.auditor, guard),
 			category: <C extends string>(category: C) =>
 				build<KeysInCategory<R, C>>(category),
 		};

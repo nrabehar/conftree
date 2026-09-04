@@ -176,15 +176,26 @@ export class MemoryStorageAdapter implements StorageAdapter {
 		return updated;
 	}
 
-	async listDefs(status?: Status): Promise<DefRecord[]> {
-		const rows = status
-			? this.defs.filter((d) => d.status === status)
-			: this.defs;
-		return [...rows].sort(
+	async listDefs(status?: Status, category?: string): Promise<DefRecord[]> {
+		const rows = this.allLatestVersions().filter(
+			(d) =>
+				(status === undefined || d.status === status) &&
+				(category === undefined || d.category === category),
+		);
+		return rows.sort(
 			(a, b) =>
 				(a.category ?? '').localeCompare(b.category ?? '') ||
 				a.key.localeCompare(b.key),
 		);
+	}
+
+	async listCategories(): Promise<string[]> {
+		const categories = new Set(
+			this.allLatestVersions()
+				.map((d) => d.category)
+				.filter((c): c is string => c !== null),
+		);
+		return [...categories].sort();
 	}
 
 	async transact<T>(fn: (tx: StorageTx) => Promise<T>): Promise<T> {
@@ -215,6 +226,15 @@ export class MemoryStorageAdapter implements StorageAdapter {
 		return this.defs
 			.filter((d) => d.key === key)
 			.sort((a, b) => b.version - a.version)[0];
+	}
+
+	private allLatestVersions(): DefRecord[] {
+		const byKey = new Map<string, DefRecord>();
+		for (const d of this.defs) {
+			const current = byKey.get(d.key);
+			if (!current || d.version > current.version) byKey.set(d.key, d);
+		}
+		return [...byKey.values()];
 	}
 
 	private tx(): StorageTx {

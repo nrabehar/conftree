@@ -11,6 +11,7 @@ export * from './engine/auditor';
 export * from './engine/hierarchy-cache-sync';
 export * from './engine/engine';
 export * from './typed/registry';
+export * from './typed/category-guard';
 export * from './typed/typed-resolver';
 export * from './typed/typed-writer';
 export * from './typed/typed-auditor';
