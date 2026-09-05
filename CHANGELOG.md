@@ -10,6 +10,8 @@ This package was previously published as `@nrabehar/sfleg`; `conftree` starts it
 
 - `category()` accessors now accept the key with its `${category}.` prefix stripped (e.g. `'currency'` instead of `'chama.currency'`) on `get`/`set`/`unset`/`history`, in addition to the full key — both forms address the same setting. If a given string already matches a real, existing key, it's used as-is rather than guessed at; only unmatched strings are treated as short and prefixed.
 - `createEngine()` now wraps `storage` with a category-integrity guard: redefining an existing key (`storage.createDef()`) under a different `category` than its current one now throws `CategoryError` instead of silently corrupting the definition. Applies regardless of the `StorageAdapter` used, not just `MemoryStorageAdapter`.
+- `EngineOptions.onPublishError`: override how a failed `ChangeBus` publish is reported (defaults to `console.error`, same as before) instead of always logging straight to the console.
+- `StorageAdapter.findAnyDefs(keys)`: batched form of `findAnyDef`. A `category('name')` accessor's `getMany`/`setMany` (and `get`/`set`/`unset`/`history`) now resolve all of a call's keys in a single storage round-trip instead of one lookup per key — implement it on custom adapters as a single query (e.g. `WHERE key IN (...)`) to get the same win against a real backend.
 
 ## [0.3.0] - 2026-09-04
 

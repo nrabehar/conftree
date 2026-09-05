@@ -48,6 +48,10 @@ jobs:
             exit 1
           fi
 
+      - name: Update README badge version
+        run: |
+          sed -i -E "s#(badge\.socket\.dev/npm/package/conftree/)[0-9]+\.[0-9]+\.[0-9]+#\1${{ steps.pkg.outputs.version }}#g" README.md
+
       - name: Commit version bump
         run: |
           git config user.name "github-actions[bot]"

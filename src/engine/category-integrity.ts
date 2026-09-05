@@ -6,6 +6,7 @@ export function withCategoryIntegrity(storage: StorageAdapter): StorageAdapter {
 		findDefs: (keys) => storage.findDefs(keys),
 		findDefsByIds: (ids) => storage.findDefsByIds(ids),
 		findAnyDef: (key) => storage.findAnyDef(key),
+		findAnyDefs: (keys) => storage.findAnyDefs(keys),
 		findValues: (query) => storage.findValues(query),
 		findChainValues: (query) => storage.findChainValues(query),
 		findAudit: (query) => storage.findAudit(query),

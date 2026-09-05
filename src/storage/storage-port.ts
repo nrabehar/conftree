@@ -89,6 +89,7 @@ export interface StorageReader {
 	findDefs(keys: string[]): Promise<DefRecord[]>;
 	findDefsByIds(ids: string[]): Promise<DefRecord[]>;
 	findAnyDef(key: string): Promise<DefRecord | null>;
+	findAnyDefs(keys: string[]): Promise<DefRecord[]>;
 	findValues(query: FindValuesQuery): Promise<ValueRecord[]>;
 	findChainValues(query: FindChainQuery): Promise<ValueRecord[]>;
 	findAudit(query: FindAuditQuery): Promise<AuditRecord[]>;

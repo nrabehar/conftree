@@ -27,10 +27,17 @@ export interface UnsetParams {
 
 const REDACTED = '[redacted]';
 
+export type PublishErrorHandler = (err: unknown) => void;
+
+const defaultOnPublishError: PublishErrorHandler = (err) => {
+	console.error('conftree: change bus publish failed', err);
+};
+
 export class Writer {
 	constructor(
 		private readonly storage: StorageAdapter,
 		private readonly bus?: ChangeBus,
+		private readonly onPublishError: PublishErrorHandler = defaultOnPublishError,
 	) {}
 
 	async set(params: SetParams): Promise<ValueRecord> {
@@ -179,7 +186,7 @@ export class Writer {
 				scopeRefId: created.scopeRefId,
 			});
 		} catch (err) {
-			console.error('conftree: change bus publish failed', err);
+			this.onPublishError(err);
 		}
 	}
 

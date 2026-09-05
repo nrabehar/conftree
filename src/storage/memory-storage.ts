@@ -92,6 +92,15 @@ export class MemoryStorageAdapter implements StorageAdapter {
 		return this.latestVersion(key) ?? null;
 	}
 
+	async findAnyDefs(keys: string[]): Promise<DefRecord[]> {
+		const result: DefRecord[] = [];
+		for (const key of keys) {
+			const found = this.latestVersion(key);
+			if (found) result.push(found);
+		}
+		return result;
+	}
+
 	async listValues(query: ListValuesQuery): Promise<ListValuesResult> {
 		const now = new Date();
 		const categoryDefIds =

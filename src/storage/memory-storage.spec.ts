@@ -326,6 +326,58 @@ describe('MemoryStorageAdapter', () => {
 		});
 	});
 
+	describe('findAnyDefs', () => {
+		it('resolves multiple keys regardless of status in a single call, skipping unknown ones', async () => {
+			const draft = await storage.createDef({
+				key: 'k1',
+				label: 'K1',
+				type: 'NUMERIC',
+				scopes: ['user'],
+				inherit: 'INDEPENDENT',
+				required: false,
+				status: 'DRAFT',
+			});
+			const stable = await storage.createDef({
+				key: 'k2',
+				label: 'K2',
+				type: 'TEXT',
+				scopes: ['user'],
+				inherit: 'INDEPENDENT',
+				required: false,
+				status: 'STABLE',
+			});
+
+			expect(await storage.findAnyDefs(['k1', 'k2', 'missing'])).toEqual([
+				draft,
+				stable,
+			]);
+			expect(await storage.findAnyDefs([])).toEqual([]);
+		});
+
+		it('returns only the latest version of a redefined key', async () => {
+			await storage.createDef({
+				key: 'k',
+				label: 'K v1',
+				type: 'NUMERIC',
+				scopes: ['user'],
+				inherit: 'INDEPENDENT',
+				required: false,
+				status: 'RETIRED',
+			});
+			const latest = await storage.createDef({
+				key: 'k',
+				label: 'K v2',
+				type: 'NUMERIC',
+				scopes: ['user'],
+				inherit: 'INDEPENDENT',
+				required: false,
+				status: 'STABLE',
+			});
+
+			expect(await storage.findAnyDefs(['k'])).toEqual([latest]);
+		});
+	});
+
 	describe('transact rollback', () => {
 		it('rolls back all writes from a failed transaction, including closeValue mutations', async () => {
 			const def = await storage.createDef({

@@ -30,6 +30,7 @@ describe('Auditor', () => {
 			findDefs: jest.fn(),
 			findDefsByIds: jest.fn(),
 			findAnyDef: jest.fn(),
+			findAnyDefs: jest.fn(),
 			findValues: jest.fn(),
 			findChainValues: jest.fn(),
 			findAudit: jest.fn(),

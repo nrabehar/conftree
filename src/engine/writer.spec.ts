@@ -221,6 +221,32 @@ describe('Writer', () => {
 		consoleError.mockRestore();
 	});
 
+	it('routes a change bus publish failure through a custom onPublishError instead of console.error', async () => {
+		const consoleError = jest
+			.spyOn(console, 'error')
+			.mockImplementation(() => {});
+		const onPublishError = jest.fn();
+		const writerWithHandler = new Writer(storage, bus, onPublishError);
+		tx.findDef.mockResolvedValue(numericDef);
+		tx.findValue.mockResolvedValue(null);
+		tx.createValue.mockResolvedValue(
+			baseValueRow({ id: 'v1', num: 50, version: 1 }),
+		);
+		const publishError = new Error('bus is down');
+		bus.publish.mockRejectedValue(publishError);
+
+		await writerWithHandler.set({
+			key: 'contribution.amount',
+			scope: { kind: 'entity', refId: 'e1' },
+			value: 50,
+			authorId: 'u1',
+		});
+
+		expect(onPublishError).toHaveBeenCalledWith(publishError);
+		expect(consoleError).not.toHaveBeenCalled();
+		consoleError.mockRestore();
+	});
+
 	it('supersedes the active value and bumps version on a correct expectedVersion', async () => {
 		tx.findDef.mockResolvedValue(numericDef);
 		tx.findValue.mockResolvedValue(
