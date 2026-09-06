@@ -1,6 +1,6 @@
 # conftree
 
-[![Socket Badge](https://badge.socket.dev/npm/package/conftree/0.3.3)](https://badge.socket.dev/npm/package/conftree/0.3.3)
+[![Socket Badge](https://badge.socket.dev/npm/package/conftree/0.4.0)](https://badge.socket.dev/npm/package/conftree/0.4.0)
 
 Generic hierarchical configuration engine. Arbitrary scopes, inheritance, caching, audit trail. Zero required dependencies: works standalone or with any storage/pub-sub backend.
 
