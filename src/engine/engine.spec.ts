@@ -481,31 +481,31 @@ describe('createEngine (end-to-end, zero config)', () => {
 
 		await storage.createDef({
 			key: 'amount',
-			label: 'Chama contribution amount',
+			label: 'Billing invoice amount',
 			type: 'NUMERIC',
 			scopes: ['group'],
 			inherit: 'INDEPENDENT',
 			required: false,
 			status: 'STABLE',
-			category: 'chama',
+			category: 'billing',
 		});
 
 		await expect(
 			storage.createDef({
 				key: 'amount',
-				label: 'Billing invoice amount',
+				label: 'Unrelated UI amount',
 				type: 'NUMERIC',
 				scopes: ['group'],
 				inherit: 'INDEPENDENT',
 				required: false,
 				status: 'STABLE',
-				category: 'billing',
+				category: 'ui',
 			}),
 		).rejects.toThrow(CategoryError);
 
-		// the original chama definition must be untouched
+		// the original billing definition must be untouched
 		const rows = await storage.listDefs();
 		expect(rows).toHaveLength(1);
-		expect(rows[0].category).toBe('chama');
+		expect(rows[0].category).toBe('billing');
 	});
 });

@@ -11,45 +11,45 @@ describe('withCategoryIntegrity', () => {
 		const storage = setup();
 
 		const def = await storage.createDef({
-			key: 'chama.amount',
+			key: 'billing.amount',
 			label: 'Amount',
 			type: 'NUMERIC',
 			scopes: ['group'],
 			inherit: 'INDEPENDENT',
 			required: false,
 			status: 'STABLE',
-			category: 'chama',
+			category: 'billing',
 		});
 
-		expect(def.category).toBe('chama');
+		expect(def.category).toBe('billing');
 	});
 
 	it('allows redefining the same key with the same category (intentional evolution)', async () => {
 		const storage = setup();
 		await storage.createDef({
-			key: 'chama.amount',
+			key: 'billing.amount',
 			label: 'Amount v1',
 			type: 'NUMERIC',
 			scopes: ['group'],
 			inherit: 'INDEPENDENT',
 			required: false,
 			status: 'STABLE',
-			category: 'chama',
+			category: 'billing',
 		});
 
 		const v2 = await storage.createDef({
-			key: 'chama.amount',
+			key: 'billing.amount',
 			label: 'Amount v2',
 			type: 'NUMERIC',
 			scopes: ['group'],
 			inherit: 'INDEPENDENT',
 			required: false,
 			status: 'STABLE',
-			category: 'chama',
+			category: 'billing',
 		});
 
 		expect(v2.version).toBe(2);
-		expect(v2.category).toBe('chama');
+		expect(v2.category).toBe('billing');
 	});
 
 	it('allows redefining an uncategorized key as still uncategorized', async () => {
@@ -82,13 +82,13 @@ describe('withCategoryIntegrity', () => {
 		const storage = setup();
 		await storage.createDef({
 			key: 'amount',
-			label: 'Chama amount',
+			label: 'Billing amount',
 			type: 'NUMERIC',
 			scopes: ['group'],
 			inherit: 'INDEPENDENT',
 			required: false,
 			status: 'STABLE',
-			category: 'chama',
+			category: 'billing',
 		});
 
 		await expect(
@@ -100,7 +100,7 @@ describe('withCategoryIntegrity', () => {
 				inherit: 'INDEPENDENT',
 				required: false,
 				status: 'STABLE',
-				category: 'billing',
+				category: 'ui',
 			}),
 		).rejects.toThrow(CategoryError);
 	});
@@ -126,7 +126,7 @@ describe('withCategoryIntegrity', () => {
 				inherit: 'INDEPENDENT',
 				required: false,
 				status: 'STABLE',
-				category: 'chama',
+				category: 'billing',
 			}),
 		).rejects.toThrow(CategoryError);
 	});
@@ -141,7 +141,7 @@ describe('withCategoryIntegrity', () => {
 			inherit: 'INDEPENDENT',
 			required: false,
 			status: 'STABLE',
-			category: 'chama',
+			category: 'billing',
 		});
 
 		await expect(
@@ -161,13 +161,13 @@ describe('withCategoryIntegrity', () => {
 		const storage = setup();
 		await storage.createDef({
 			key: 'amount',
-			label: 'Chama amount',
+			label: 'Billing amount',
 			type: 'NUMERIC',
 			scopes: ['group'],
 			inherit: 'INDEPENDENT',
 			required: false,
 			status: 'STABLE',
-			category: 'chama',
+			category: 'billing',
 		});
 
 		await expect(
@@ -179,13 +179,13 @@ describe('withCategoryIntegrity', () => {
 				inherit: 'INDEPENDENT',
 				required: false,
 				status: 'STABLE',
-				category: 'billing',
+				category: 'ui',
 			}),
 		).rejects.toThrow(CategoryError);
 
 		const rows = await storage.listDefs();
 		expect(rows).toHaveLength(1);
-		expect(rows[0].category).toBe('chama');
+		expect(rows[0].category).toBe('billing');
 	});
 
 	it('other StorageAdapter methods keep working correctly through the wrapper (no `this` binding issues)', async () => {
@@ -198,10 +198,10 @@ describe('withCategoryIntegrity', () => {
 			inherit: 'INDEPENDENT',
 			required: false,
 			status: 'STABLE',
-			category: 'chama',
+			category: 'billing',
 		});
 
-		expect(await storage.listCategories()).toEqual(['chama']);
+		expect(await storage.listCategories()).toEqual(['billing']);
 		expect((await storage.findDefs(['k']))[0]?.key).toBe('k');
 		await storage.transact(async (tx) => {
 			const def = await tx.findDef('k');

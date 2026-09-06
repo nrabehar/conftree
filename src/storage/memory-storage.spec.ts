@@ -188,15 +188,15 @@ describe('MemoryStorageAdapter', () => {
 		});
 
 		it('filters by category, joining against the owning definition', async () => {
-			const chamaDef = await storage.createDef({
-				key: 'chama.amount',
+			const billingDef = await storage.createDef({
+				key: 'billing.amount',
 				label: 'Amount',
 				type: 'NUMERIC',
 				scopes: ['group'],
 				inherit: 'INDEPENDENT',
 				required: false,
 				status: 'STABLE',
-				category: 'chama',
+				category: 'billing',
 			});
 			const uiDef = await storage.createDef({
 				key: 'ui.theme',
@@ -210,7 +210,7 @@ describe('MemoryStorageAdapter', () => {
 			});
 			await storage.transact(async (tx) => {
 				await tx.createValue({
-					definitionId: chamaDef.id,
+					definitionId: billingDef.id,
 					scopeKind: 'group',
 					scopeRefId: 'g1',
 					version: 1,
@@ -232,11 +232,11 @@ describe('MemoryStorageAdapter', () => {
 			const page = await storage.listValues({
 				scopeKind: 'group',
 				scopeRefId: 'g1',
-				category: 'chama',
+				category: 'billing',
 			});
 
 			expect(page.values).toHaveLength(1);
-			expect(page.values[0].definitionId).toBe(chamaDef.id);
+			expect(page.values[0].definitionId).toBe(billingDef.id);
 		});
 
 		it('paginates correctly within a category filter', async () => {
@@ -244,14 +244,14 @@ describe('MemoryStorageAdapter', () => {
 			for (let i = 0; i < 3; i++) {
 				defs.push(
 					await storage.createDef({
-						key: `chama.k${i}`,
+						key: `billing.k${i}`,
 						label: `K${i}`,
 						type: 'NUMERIC',
 						scopes: ['group'],
 						inherit: 'INDEPENDENT',
 						required: false,
 						status: 'STABLE',
-						category: 'chama',
+						category: 'billing',
 					}),
 				);
 			}
@@ -291,7 +291,7 @@ describe('MemoryStorageAdapter', () => {
 			const firstPage = await storage.listValues({
 				scopeKind: 'group',
 				scopeRefId: 'g1',
-				category: 'chama',
+				category: 'billing',
 				limit: 2,
 			});
 			expect(firstPage.values).toHaveLength(2);
@@ -300,7 +300,7 @@ describe('MemoryStorageAdapter', () => {
 			const secondPage = await storage.listValues({
 				scopeKind: 'group',
 				scopeRefId: 'g1',
-				category: 'chama',
+				category: 'billing',
 				limit: 2,
 				cursor: firstPage.nextCursor!,
 			});
@@ -511,14 +511,14 @@ describe('MemoryStorageAdapter', () => {
 
 		it('filters by category', async () => {
 			await storage.createDef({
-				key: 'chama.amount',
+				key: 'billing.amount',
 				label: 'Amount',
 				type: 'NUMERIC',
 				scopes: ['group'],
 				inherit: 'INDEPENDENT',
 				required: false,
 				status: 'STABLE',
-				category: 'chama',
+				category: 'billing',
 			});
 			await storage.createDef({
 				key: 'ui.theme',
@@ -531,36 +531,36 @@ describe('MemoryStorageAdapter', () => {
 				category: 'ui',
 			});
 
-			const rows = await storage.listDefs(undefined, 'chama');
+			const rows = await storage.listDefs(undefined, 'billing');
 
-			expect(rows.map((d) => d.key)).toEqual(['chama.amount']);
+			expect(rows.map((d) => d.key)).toEqual(['billing.amount']);
 		});
 
 		it('combines status and category filters', async () => {
 			await storage.createDef({
-				key: 'chama.amount',
+				key: 'billing.amount',
 				label: 'Amount',
 				type: 'NUMERIC',
 				scopes: ['group'],
 				inherit: 'INDEPENDENT',
 				required: false,
 				status: 'DRAFT',
-				category: 'chama',
+				category: 'billing',
 			});
 			await storage.createDef({
-				key: 'chama.currency',
+				key: 'billing.currency',
 				label: 'Currency',
 				type: 'TEXT',
 				scopes: ['group'],
 				inherit: 'INDEPENDENT',
 				required: false,
 				status: 'STABLE',
-				category: 'chama',
+				category: 'billing',
 			});
 
-			const rows = await storage.listDefs('STABLE', 'chama');
+			const rows = await storage.listDefs('STABLE', 'billing');
 
-			expect(rows.map((d) => d.key)).toEqual(['chama.currency']);
+			expect(rows.map((d) => d.key)).toEqual(['billing.currency']);
 		});
 	});
 
@@ -577,24 +577,24 @@ describe('MemoryStorageAdapter', () => {
 				category: 'ui',
 			});
 			await storage.createDef({
-				key: 'chama.amount',
+				key: 'billing.amount',
 				label: 'Amount',
 				type: 'NUMERIC',
 				scopes: ['group'],
 				inherit: 'INDEPENDENT',
 				required: false,
 				status: 'STABLE',
-				category: 'chama',
+				category: 'billing',
 			});
 			await storage.createDef({
-				key: 'chama.currency',
+				key: 'billing.currency',
 				label: 'Currency',
 				type: 'TEXT',
 				scopes: ['group'],
 				inherit: 'INDEPENDENT',
 				required: false,
 				status: 'STABLE',
-				category: 'chama',
+				category: 'billing',
 			});
 			await storage.createDef({
 				key: 'uncategorized.thing',
@@ -606,7 +606,7 @@ describe('MemoryStorageAdapter', () => {
 				status: 'STABLE',
 			});
 
-			expect(await storage.listCategories()).toEqual(['chama', 'ui']);
+			expect(await storage.listCategories()).toEqual(['billing', 'ui']);
 		});
 
 		it('excludes a category whose only def has since been superseded by an uncategorized version', async () => {
@@ -618,7 +618,7 @@ describe('MemoryStorageAdapter', () => {
 				inherit: 'INDEPENDENT',
 				required: false,
 				status: 'STABLE',
-				category: 'chama',
+				category: 'billing',
 			});
 			await storage.createDef({
 				key: 'k',

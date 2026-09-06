@@ -113,7 +113,7 @@ import { createEngine, createTypedEngine } from 'conftree';
 
 interface Registry {
 	'ui.theme': { value: 'light' | 'dark' | 'system'; scope: 'user' };
-	'chama.contributionAmount': { value: number; scope: 'group' | 'member' };
+	'billing.amount': { value: number; scope: 'group' | 'member' };
 }
 
 const { resolver, writer } = createTypedEngine<Registry>(createEngine());
@@ -136,48 +136,48 @@ Tag registry entries with `category` (matching the `category` you pass to `stora
 ```ts
 interface Registry {
 	'ui.theme': { value: 'light' | 'dark' | 'system'; scope: 'user' };
-	'chama.contributionAmount': {
+	'billing.amount': {
 		value: number;
 		scope: 'group' | 'member';
-		category: 'chama';
+		category: 'billing';
 	};
-	'chama.currency': {
+	'billing.currency': {
 		value: string;
 		scope: 'group' | 'member';
-		category: 'chama';
+		category: 'billing';
 	};
 }
 
 const engine = createTypedEngine<Registry>(createEngine());
-const chama = engine.category('chama');
+const billing = engine.category('billing');
 
-await chama.writer.set({
-	key: 'chama.contributionAmount', // 'ui.theme' would be a compile error here
+await billing.writer.set({
+	key: 'billing.amount', // 'ui.theme' would be a compile error here
 	scope: { kind: 'group', refId: 'g1' },
 	value: 5000,
 	authorId: 'admin',
 });
 
-await chama.resolver.listAt({ kind: 'group', refId: 'g1' });
-// { entries: { 'chama.contributionAmount': 5000, 'chama.currency': 'KES' }, nextCursor: null }
-// — only chama.* keys, even if other categories are also set at that scope
+await billing.resolver.listAt({ kind: 'group', refId: 'g1' });
+// { entries: { 'billing.amount': 5000, 'billing.currency': 'USD' }, nextCursor: null }
+// — only billing.* keys, even if other categories are also set at that scope
 ```
 
 A key with no `category` in the registry (like `ui.theme` above) simply never shows up in any `category(...)` view.
 
-Since a key must stay globally unique across every category, real key names tend to be prefixed with their category (`'chama.currency'`) — which becomes pure repetition once you're already inside `category('chama')`. So `get`/`set`/`unset`/`history` on a `category(...)` accessor also accept the key with that `${category}.` prefix stripped:
+Since a key must stay globally unique across every category, real key names tend to be prefixed with their category (`'billing.currency'`) — which becomes pure repetition once you're already inside `category('billing')`. So `get`/`set`/`unset`/`history` on a `category(...)` accessor also accept the key with that `${category}.` prefix stripped:
 
 ```ts
-await chama.writer.set({
-	key: 'currency', // same as 'chama.currency'
+await billing.writer.set({
+	key: 'currency', // same as 'billing.currency'
 	scope: { kind: 'group', refId: 'g1' },
-	value: 'KES',
+	value: 'USD',
 	authorId: 'admin',
 });
-await chama.resolver.get('currency', { kind: 'group', refId: 'g1' }); // 'KES'
+await billing.resolver.get('currency', { kind: 'group', refId: 'g1' }); // 'USD'
 ```
 
-The full key (`'chama.currency'`) still works exactly as before on the same accessor — both forms address the same setting. If a given string happens to already be a real, existing key (regardless of category), it's treated as a full key as-is rather than guessed at; only when it doesn't match anything is it prefixed and treated as short. `getMany`'s result is keyed however you called it (short or full, per key).
+The full key (`'billing.currency'`) still works exactly as before on the same accessor — both forms address the same setting. If a given string happens to already be a real, existing key (regardless of category), it's treated as a full key as-is rather than guessed at; only when it doesn't match anything is it prefixed and treated as short. `getMany`'s result is keyed however you called it (short or full, per key).
 
 `get`/`set`/`unset`/`history` on a `category(...)` accessor are narrowed at compile time — but if a caller bypasses that with `as any`, a runtime check still catches it and throws `CategoryError` (code `'CATEGORY'`) rather than silently touching a setting from another category.
 

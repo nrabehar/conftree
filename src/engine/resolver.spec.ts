@@ -513,11 +513,11 @@ describe('Resolver', () => {
 
 			await resolver.listAt(
 				{ kind: 'entity', refId: 'e1' },
-				{ category: 'chama' },
+				{ category: 'billing' },
 			);
 
 			expect(storage.listValues).toHaveBeenCalledWith(
-				expect.objectContaining({ category: 'chama' }),
+				expect.objectContaining({ category: 'billing' }),
 			);
 		});
 	});

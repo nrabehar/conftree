@@ -39,21 +39,21 @@ describe('CategoryGuard', () => {
 			findAudit: jest.fn(),
 			listValues: jest.fn(),
 		};
-		guard = new CategoryGuard(storage, 'chama');
+		guard = new CategoryGuard(storage, 'billing');
 	});
 
 	describe('resolveKeys', () => {
 		it('resolves a mix of full and short keys in a single storage call', async () => {
 			storage.findAnyDefs.mockResolvedValue([
-				def({ key: 'chama.currency', category: 'chama' }),
+				def({ key: 'billing.currency', category: 'billing' }),
 			]);
 
 			const resolved = await guard.resolveKeys([
 				'currency',
-				'chama.currency',
+				'billing.currency',
 			]);
 
-			expect(resolved).toEqual(['chama.currency', 'chama.currency']);
+			expect(resolved).toEqual(['billing.currency', 'billing.currency']);
 			expect(storage.findAnyDefs).toHaveBeenCalledTimes(1);
 		});
 
@@ -76,12 +76,12 @@ describe('CategoryGuard', () => {
 	describe('assertAll', () => {
 		it('checks every key in a single storage call', async () => {
 			storage.findAnyDefs.mockResolvedValue([
-				def({ key: 'chama.currency', category: 'chama' }),
-				def({ key: 'chama.limit', category: 'chama' }),
+				def({ key: 'billing.currency', category: 'billing' }),
+				def({ key: 'billing.limit', category: 'billing' }),
 			]);
 
 			await expect(
-				guard.assertAll(['chama.currency', 'chama.limit']),
+				guard.assertAll(['billing.currency', 'billing.limit']),
 			).resolves.toBeUndefined();
 			expect(storage.findAnyDefs).toHaveBeenCalledTimes(1);
 		});

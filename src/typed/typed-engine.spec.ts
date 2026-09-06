@@ -3,20 +3,20 @@ import { createTypedEngine } from './typed-engine';
 import { CategoryError } from '../core/errors';
 
 interface Registry {
-	'chama.contributionAmount': {
+	'billing.amount': {
 		value: number;
 		scope: 'group' | 'member';
-		category: 'chama';
+		category: 'billing';
 	};
-	'chama.currency': {
+	'billing.currency': {
 		value: string;
 		scope: 'group' | 'member';
-		category: 'chama';
+		category: 'billing';
 	};
-	'chama.limits.maxContribution': {
+	'billing.limits.maxAmount': {
 		value: number;
 		scope: 'group' | 'member';
-		category: 'chama';
+		category: 'billing';
 	};
 	'ui.theme': { value: 'light' | 'dark' | 'system'; scope: 'user' };
 }
@@ -25,34 +25,34 @@ describe('createTypedEngine', () => {
 	async function setup() {
 		const engine = createEngine();
 		await engine.storage.createDef({
-			key: 'chama.contributionAmount',
-			label: 'Contribution amount',
+			key: 'billing.amount',
+			label: 'Amount',
 			type: 'NUMERIC',
 			scopes: ['group', 'member'],
 			inherit: 'INHERITABLE_OVERRIDABLE',
 			required: false,
 			status: 'STABLE',
-			category: 'chama',
+			category: 'billing',
 		});
 		await engine.storage.createDef({
-			key: 'chama.currency',
+			key: 'billing.currency',
 			label: 'Currency',
 			type: 'TEXT',
 			scopes: ['group', 'member'],
 			inherit: 'INHERITABLE_OVERRIDABLE',
 			required: false,
 			status: 'STABLE',
-			category: 'chama',
+			category: 'billing',
 		});
 		await engine.storage.createDef({
-			key: 'chama.limits.maxContribution',
-			label: 'Max contribution',
+			key: 'billing.limits.maxAmount',
+			label: 'Max amount',
 			type: 'NUMERIC',
 			scopes: ['group', 'member'],
 			inherit: 'INHERITABLE_OVERRIDABLE',
 			required: false,
 			status: 'STABLE',
-			category: 'chama',
+			category: 'billing',
 		});
 		await engine.storage.createDef({
 			key: 'ui.theme',
@@ -71,13 +71,13 @@ describe('createTypedEngine', () => {
 		const { resolver, writer } = await setup();
 
 		await writer.set({
-			key: 'chama.contributionAmount',
+			key: 'billing.amount',
 			scope: { kind: 'group', refId: 'g1' },
 			value: 5000,
 			authorId: 'admin',
 		});
 
-		const value = await resolver.get('chama.contributionAmount', {
+		const value = await resolver.get('billing.amount', {
 			kind: 'group',
 			refId: 'g1',
 		});
@@ -88,25 +88,25 @@ describe('createTypedEngine', () => {
 		const { resolver, writer } = await setup();
 
 		await writer.set({
-			key: 'chama.contributionAmount',
+			key: 'billing.amount',
 			scope: { kind: 'group', refId: 'g1' },
 			value: 5000,
 			authorId: 'admin',
 		});
 		await writer.set({
-			key: 'chama.currency',
+			key: 'billing.currency',
 			scope: { kind: 'group', refId: 'g1' },
-			value: 'KES',
+			value: 'USD',
 			authorId: 'admin',
 		});
 
 		const values = await resolver.getMany(
-			['chama.contributionAmount', 'chama.currency'] as const,
+			['billing.amount', 'billing.currency'] as const,
 			{ kind: 'group', refId: 'g1' },
 		);
 		expect(values).toEqual({
-			'chama.contributionAmount': 5000,
-			'chama.currency': 'KES',
+			'billing.amount': 5000,
+			'billing.currency': 'USD',
 		});
 	});
 
@@ -157,16 +157,16 @@ describe('createTypedEngine', () => {
 	describe('category()', () => {
 		it('scopes get()/set() to only the keys in that category, at the type level, with unchanged runtime behavior', async () => {
 			const { category } = await setup();
-			const chama = category('chama');
+			const billing = category('billing');
 
-			await chama.writer.set({
-				key: 'chama.contributionAmount',
+			await billing.writer.set({
+				key: 'billing.amount',
 				scope: { kind: 'group', refId: 'g1' },
 				value: 7500,
 				authorId: 'admin',
 			});
 
-			const value = await chama.resolver.get('chama.contributionAmount', {
+			const value = await billing.resolver.get('billing.amount', {
 				kind: 'group',
 				refId: 'g1',
 			});
@@ -175,29 +175,29 @@ describe('createTypedEngine', () => {
 
 		it('listAt() is filtered server-side to only that category, even when other categories are set at the same scope', async () => {
 			const { category, writer } = await setup();
-			const chama = category('chama');
+			const billing = category('billing');
 
 			await writer.set({
-				key: 'chama.contributionAmount',
+				key: 'billing.amount',
 				scope: { kind: 'group', refId: 'g1' },
 				value: 5000,
 				authorId: 'admin',
 			});
 			await writer.set({
-				key: 'chama.currency',
+				key: 'billing.currency',
 				scope: { kind: 'group', refId: 'g1' },
-				value: 'KES',
+				value: 'USD',
 				authorId: 'admin',
 			});
 
-			const { entries } = await chama.resolver.listAt({
+			const { entries } = await billing.resolver.listAt({
 				kind: 'group',
 				refId: 'g1',
 			});
 
 			expect(entries).toEqual({
-				'chama.contributionAmount': 5000,
-				'chama.currency': 'KES',
+				'billing.amount': 5000,
+				'billing.currency': 'USD',
 			});
 		});
 
@@ -211,7 +211,7 @@ describe('createTypedEngine', () => {
 				authorId: 'u1',
 			});
 
-			const { entries } = await category('chama').resolver.listAt({
+			const { entries } = await category('billing').resolver.listAt({
 				kind: 'user',
 				refId: 'u1',
 			});
@@ -221,7 +221,7 @@ describe('createTypedEngine', () => {
 
 		it('throws CategoryError at runtime if a type-unsafe caller bypasses narrowing with a key from another category', async () => {
 			const { category } = await setup();
-			const chama = category('chama') as unknown as {
+			const billing = category('billing') as unknown as {
 				resolver: {
 					get: (key: string, scope: unknown) => Promise<unknown>;
 				};
@@ -230,11 +230,11 @@ describe('createTypedEngine', () => {
 			};
 
 			await expect(
-				chama.resolver.get('ui.theme', { kind: 'user', refId: 'u1' }),
+				billing.resolver.get('ui.theme', { kind: 'user', refId: 'u1' }),
 			).rejects.toThrow(CategoryError);
 
 			await expect(
-				chama.writer.set({
+				billing.writer.set({
 					key: 'ui.theme',
 					scope: { kind: 'user', refId: 'u1' },
 					value: 'dark',
@@ -242,7 +242,7 @@ describe('createTypedEngine', () => {
 				}),
 			).rejects.toThrow(CategoryError);
 
-			await expect(chama.auditor.history('ui.theme')).rejects.toThrow(
+			await expect(billing.auditor.history('ui.theme')).rejects.toThrow(
 				CategoryError,
 			);
 		});
@@ -265,34 +265,34 @@ describe('createTypedEngine', () => {
 	describe('short keys on a category() accessor', () => {
 		it('set()/get() accept the key with the category prefix stripped', async () => {
 			const { category } = await setup();
-			const chama = category('chama');
+			const billing = category('billing');
 
-			await chama.writer.set({
+			await billing.writer.set({
 				key: 'currency',
 				scope: { kind: 'group', refId: 'g1' },
-				value: 'KES',
+				value: 'USD',
 				authorId: 'admin',
 			});
 
-			const value = await chama.resolver.get('currency', {
+			const value = await billing.resolver.get('currency', {
 				kind: 'group',
 				refId: 'g1',
 			});
-			expect(value).toBe('KES');
+			expect(value).toBe('USD');
 		});
 
 		it('strips only the leading `category.` prefix, keeping the rest of a multi-segment key intact', async () => {
 			const { category } = await setup();
-			const chama = category('chama');
+			const billing = category('billing');
 
-			await chama.writer.set({
-				key: 'limits.maxContribution',
+			await billing.writer.set({
+				key: 'limits.maxAmount',
 				scope: { kind: 'group', refId: 'g1' },
 				value: 10000,
 				authorId: 'admin',
 			});
 
-			const value = await chama.resolver.get('limits.maxContribution', {
+			const value = await billing.resolver.get('limits.maxAmount', {
 				kind: 'group',
 				refId: 'g1',
 			});
@@ -301,43 +301,43 @@ describe('createTypedEngine', () => {
 
 		it('still accepts the full key on a category() accessor, unchanged (backward compatible)', async () => {
 			const { category } = await setup();
-			const chama = category('chama');
+			const billing = category('billing');
 
-			await chama.writer.set({
-				key: 'chama.currency',
+			await billing.writer.set({
+				key: 'billing.currency',
 				scope: { kind: 'group', refId: 'g1' },
-				value: 'KES',
+				value: 'USD',
 				authorId: 'admin',
 			});
 
-			const value = await chama.resolver.get('chama.currency', {
+			const value = await billing.resolver.get('billing.currency', {
 				kind: 'group',
 				refId: 'g1',
 			});
-			expect(value).toBe('KES');
+			expect(value).toBe('USD');
 		});
 
 		it('short and full key forms address the exact same underlying setting', async () => {
 			const { category } = await setup();
-			const chama = category('chama');
+			const billing = category('billing');
 
-			await chama.writer.set({
+			await billing.writer.set({
 				key: 'currency',
 				scope: { kind: 'group', refId: 'g1' },
-				value: 'KES',
+				value: 'USD',
 				authorId: 'admin',
 			});
 
 			await expect(
-				chama.resolver.get('chama.currency', {
+				billing.resolver.get('billing.currency', {
 					kind: 'group',
 					refId: 'g1',
 				}),
-			).resolves.toBe('KES');
+			).resolves.toBe('USD');
 
 			await expect(
-				chama.writer.set({
-					key: 'chama.currency',
+				billing.writer.set({
+					key: 'billing.currency',
 					scope: { kind: 'group', refId: 'g1' },
 					value: 'UGX',
 					expectedVersion: 1,
@@ -348,43 +348,43 @@ describe('createTypedEngine', () => {
 
 		it('getMany() accepts a mix of short and full keys and keys the result the same way it was called', async () => {
 			const { category, writer } = await setup();
-			const chama = category('chama');
+			const billing = category('billing');
 
 			await writer.set({
-				key: 'chama.contributionAmount',
+				key: 'billing.amount',
 				scope: { kind: 'group', refId: 'g1' },
 				value: 5000,
 				authorId: 'admin',
 			});
 			await writer.set({
-				key: 'chama.currency',
+				key: 'billing.currency',
 				scope: { kind: 'group', refId: 'g1' },
-				value: 'KES',
+				value: 'USD',
 				authorId: 'admin',
 			});
 
-			const values = await chama.resolver.getMany(
-				['contributionAmount', 'chama.currency'] as const,
+			const values = await billing.resolver.getMany(
+				['amount', 'billing.currency'] as const,
 				{ kind: 'group', refId: 'g1' },
 			);
 
 			expect(values).toEqual({
-				contributionAmount: 5000,
-				'chama.currency': 'KES',
+				amount: 5000,
+				'billing.currency': 'USD',
 			});
 		});
 
 		it('unset() and auditor.history() also accept the short key', async () => {
 			const { category } = await setup();
-			const chama = category('chama');
+			const billing = category('billing');
 
-			await chama.writer.set({
+			await billing.writer.set({
 				key: 'currency',
 				scope: { kind: 'group', refId: 'g1' },
-				value: 'KES',
+				value: 'USD',
 				authorId: 'admin',
 			});
-			await chama.writer.unset({
+			await billing.writer.unset({
 				key: 'currency',
 				scope: { kind: 'group', refId: 'g1' },
 				expectedVersion: 1,
@@ -392,13 +392,13 @@ describe('createTypedEngine', () => {
 			});
 
 			await expect(
-				chama.resolver.get('currency', {
+				billing.resolver.get('currency', {
 					kind: 'group',
 					refId: 'g1',
 				}),
 			).rejects.toThrow();
 
-			const history = await chama.auditor.history('currency');
+			const history = await billing.auditor.history('currency');
 			expect(history.map((h) => h.action)).toEqual(['created', 'unset']);
 		});
 
@@ -410,7 +410,7 @@ describe('createTypedEngine', () => {
 				value: 'dark',
 				authorId: 'u1',
 			});
-			const chama = category('chama') as unknown as {
+			const billing = category('billing') as unknown as {
 				resolver: {
 					get: (key: string, scope: unknown) => Promise<unknown>;
 				};
@@ -418,9 +418,9 @@ describe('createTypedEngine', () => {
 
 			// 'ui.theme' is a real, existing key belonging to a different category —
 			// it must be rejected as a cross-category access, not reinterpreted as
-			// the (nonsensical) short key "ui.theme" prefixed into "chama.ui.theme".
+			// the (nonsensical) short key "ui.theme" prefixed into "billing.ui.theme".
 			await expect(
-				chama.resolver.get('ui.theme', { kind: 'user', refId: 'u1' }),
+				billing.resolver.get('ui.theme', { kind: 'user', refId: 'u1' }),
 			).rejects.toThrow(CategoryError);
 		});
 	});

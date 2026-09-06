@@ -1,14 +1,17 @@
 name: Release
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       bump:
-        description: Version bump type
+        description: Version bump type (auto detects it from commit messages)
         type: choice
         required: true
-        default: patch
+        default: auto
         options:
+          - auto
           - patch
           - minor
           - major
@@ -20,8 +23,15 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    # A push from this workflow's own "Commit version bump" step would otherwise
+    # re-trigger this same workflow on every release. GITHUB_TOKEN pushes are
+    # already exempted from re-triggering workflows, but this is a cheap,
+    # explicit second guard against a release loop.
+    if: "${{ github.event_name != 'push' || !contains(github.event.head_commit.message, 'chore: bump version to') }}"
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v7
         with:
@@ -30,8 +40,29 @@ jobs:
 
       - run: npm ci
 
+      - name: Determine version bump type
+        id: bumptype
+        run: |
+          INPUT_BUMP="${{ github.event.inputs.bump }}"
+          if [ -n "$INPUT_BUMP" ] && [ "$INPUT_BUMP" != "auto" ]; then
+            echo "type=$INPUT_BUMP" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          RANGE="${LAST_TAG:+$LAST_TAG..}HEAD"
+          COMMITS=$(git log "$RANGE" --pretty=format:"%s%n%b")
+
+          if echo "$COMMITS" | grep -qE "^BREAKING CHANGE|^[a-zA-Z]+(\([^)]*\))?!:"; then
+            echo "type=major" >> "$GITHUB_OUTPUT"
+          elif echo "$COMMITS" | grep -qE "^feat(\([^)]*\))?:"; then
+            echo "type=minor" >> "$GITHUB_OUTPUT"
+          else
+            echo "type=patch" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Bump version
-        run: npm version ${{ inputs.bump }} --no-git-tag-version
+        run: npm version ${{ steps.bumptype.outputs.type }} --no-git-tag-version
 
       - run: npm run lint
       - run: npm test
